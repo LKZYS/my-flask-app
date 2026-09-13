@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | تسجيل الدخول</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1A18;
+    --gold:#C8A24A;
+    --gold-soft:#E4CE94;
+    --sand:#F4EEE1;
+    --line: rgba(244,238,225,0.14);
+    --error:#C4623F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--sand);
+    color:var(--ink);
+    display:flex;
+    min-height:100vh;
+  }
+  a{color:inherit;}
+
+  .brand{
+    position:relative;
+    flex:1 1 46%;
+    background:var(--ink);
+    color:var(--sand);
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:56px 64px;
+    overflow:hidden;
+  }
+  .brand::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:
+      repeating-linear-gradient(60deg, transparent 0 68px, var(--line) 68px 69px),
+      repeating-linear-gradient(-60deg, transparent 0 68px, var(--line) 68px 69px),
+      repeating-linear-gradient(0deg, transparent 0 68px, var(--line) 68px 69px);
+    opacity:.55;
+    animation:gridDrift 26s linear infinite;
+  }
+  .brand::after{
+    content:"";
+    position:absolute;
+    left:-18%;
+    bottom:-22%;
+    width:70%;
+    aspect-ratio:1;
+    border-radius:50%;
+    background: radial-gradient(circle at 35% 35%, rgba(200,162,74,.35), transparent 68%);
+    filter: blur(2px);
+    animation:blobFloat 9s ease-in-out infinite;
+  }
+  .brand-top, .brand-bottom{position:relative; z-index:1;}
+  .brand-mark{display:flex; align-items:center; gap:12px;}
+  .brand-mark img{width:32px; height:32px; object-fit:contain;}
+  .brand-name{font-family:'Tajawal', sans-serif; font-weight:700; font-size:22px; letter-spacing:.5px;}
+  .brand-headline{
+    font-family:'Tajawal', sans-serif;
+    font-weight:900;
+    font-size:clamp(32px, 4vw, 46px);
+    line-height:1.35;
+    max-width:9.5em;
+    margin-top:48px;
+  }
+  .brand-headline span{color:var(--gold-soft);}
+  .brand-sub{margin-top:20px; font-size:16px; line-height:1.9; max-width:30em; color:rgba(244,238,225,.7);}
+
+  .feature-list{ display:flex; flex-direction:column; gap:18px; margin-top:40px; }
+  .feature-item{ display:flex; align-items:flex-start; gap:14px; max-width:28em; }
+  .feature-icon{
+    width:36px; height:36px; flex-shrink:0; border-radius:10px;
+    background:rgba(200,162,74,.14); border:1px solid rgba(200,162,74,.3);
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .feature-text .ft-title{ font-size:14px; font-weight:600; color:var(--sand); margin-bottom:3px; }
+  .feature-text .ft-sub{ font-size:13px; color:rgba(244,238,225,.55); line-height:1.6; }
+
+  .brand-quote{
+    border-inline-start:2px solid var(--gold);
+    padding-inline-start:18px;
+    font-size:14px;
+    line-height:1.9;
+    color:rgba(244,238,225,.55);
+    max-width:26em;
+  }
+
+  .stage{flex:1 1 54%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 24px; position:relative;}
+  .stage-mark{ position:absolute; top:32px; inset-inline-end:36px; display:flex; align-items:center; gap:10px; }
+  .stage-mark img{ width:26px; height:26px; object-fit:contain; }
+  .stage-mark span{ font-family:'Tajawal', sans-serif; font-weight:700; font-size:14px; color:#7A7263; }
+  .card{width:100%; max-width:400px;}
+  .card-eyebrow{font-size:14px; color:#7A7263;}
+  .card h1{font-family:'Tajawal', sans-serif; font-weight:700; font-size:30px; margin-top:8px; margin-bottom:28px;}
+
+  .flash{
+    background:#FBEAE3;
+    border:1px solid var(--error);
+    color:#8A3B22;
+    font-size:14px;
+    padding:12px 16px;
+    border-radius:8px;
+    margin-bottom:20px;
+  }
+  .flash-success{
+    background:#E6F4EC;
+    border-color:#2E7D5B;
+    color:#1E5A3F;
+  }
+
+  .field{margin-bottom:20px;}
+  .field label{display:block; font-size:14px; font-weight:500; margin-bottom:8px; color:#3C382F;}
+  .field input{
+    width:100%; height:50px; padding:0 16px;
+    font-family:inherit; font-size:15px; color:var(--ink);
+    background:#fff; border:1.5px solid #E1D9C4; border-radius:8px;
+    outline:none; transition:border-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  }
+  .field input::placeholder{color:#B7AE99;}
+  .field input:focus{border-color:var(--gold); box-shadow:0 0 0 3px rgba(200,162,74,.22); transform:translateY(-1px);}
+
+  .row{display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; font-size:14px;}
+  .remember{display:flex; align-items:center; gap:8px; color:#3C382F;}
+  .remember input{width:16px; height:16px; accent-color:var(--ink);}
+  .forgot{color:#8A6A22; text-decoration:none; font-weight:500;}
+  .forgot:hover{text-decoration:underline;}
+
+  .submit{
+    width:100%; height:52px; border:none; border-radius:8px;
+    background:var(--ink); color:var(--sand);
+    font-family:inherit; font-size:16px; font-weight:500;
+    cursor:pointer; transition:transform .12s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .submit:hover{background:#1B322C; transform:translateY(-1px); box-shadow:0 6px 16px rgba(15,26,24,.25);}
+  .submit:active{transform:scale(0.99);}
+
+  .signup{margin-top:32px; text-align:center; font-size:14px; color:#7A7263;}
+  .signup a{color:var(--ink); font-weight:600; text-decoration:none;}
+  .signup a:hover{text-decoration:underline;}
+
+  @keyframes fadeUp{
+    from{ opacity:0; transform:translateY(16px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  @keyframes fadeIn{
+    from{ opacity:0; }
+    to{ opacity:1; }
+  }
+  @keyframes blobFloat{
+    0%, 100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(3%, -4%) scale(1.06); }
+  }
+  @keyframes gridDrift{
+    from{ background-position:0 0, 0 0, 0 0; }
+    to{ background-position:68px 0, -68px 0, 0 68px; }
+  }
+
+  .brand-mark{ animation:fadeUp .6s ease both; }
+  .brand-headline{ animation:fadeUp .7s ease .08s both; }
+  .brand-sub{ animation:fadeUp .7s ease .16s both; }
+  .feature-item{ animation:fadeUp .6s ease both; }
+  .feature-item:nth-child(1){ animation-delay:.26s; }
+  .feature-item:nth-child(2){ animation-delay:.34s; }
+  .brand-quote{ animation:fadeIn 1s ease .5s both; }
+
+  .stage-mark{ animation:fadeUp .6s ease .1s both; }
+  .card-eyebrow{ animation:fadeUp .6s ease .16s both; }
+  .card h1{ animation:fadeUp .6s ease .22s both; }
+  .field{ animation:fadeUp .55s ease both; }
+  .field:nth-of-type(1){ animation-delay:.28s; }
+  .field:nth-of-type(2){ animation-delay:.34s; }
+  .row{ animation:fadeUp .55s ease .4s both; }
+  .submit{ animation:fadeUp .55s ease .46s both; }
+  .signup{ animation:fadeIn .6s ease .55s both; }
+
+  @media (prefers-reduced-motion: reduce){
+    .brand-mark, .brand-headline, .brand-sub, .feature-item, .brand-quote,
+    .stage-mark, .card-eyebrow, .card h1, .field, .row, .submit, .signup{
+      animation:none !important;
+    }
+    .brand::before, .brand::after{ animation:none !important; }
+  }
+    body{flex-direction:column;}
+    .brand{flex:0 0 auto; padding:40px 28px; min-height:200px;}
+    .brand-headline{margin-top:24px; font-size:26px;}
+    .brand-quote{display:none;}
+    .stage{padding:36px 20px 60px;}
+  }
+</style>
+</head>
+<body>
+
+  <section class="brand">
+    <div class="brand-top">
+      <div class="brand-mark">
+        <img src="{{ url_for('static', filename='tvtc-logo.webp') }}" alt="شعار المؤسسة">
+        <span class="brand-name">College IT Support</span>
+      </div>
+      <h1 class="brand-headline">دعم فني أسرع<br>لكل <span>طلاب الكلية</span></h1>
+      <p class="brand-sub">بلّغ عن أي مشكلة تقنية بمعامل الكلية أو حسابك الجامعي، وتابع حل مشكلتك خطوة بخطوة.</p>
+
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-text">
+            <div class="ft-title">استجابة سريعة</div>
+            <div class="ft-sub">بلاغك يوصل فريق الدعم الفني فورًا بدون أي تأخير</div>
+          </div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📋</div>
+          <div class="feature-text">
+            <div class="ft-title">متابعة لحظية</div>
+            <div class="ft-sub">تابع حالة بلاغك خطوة بخطوة من لوحة التحكم</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="brand-bottom">
+      <p class="brand-quote">"قللنا وقت الاستجابة لتذاكر الدعم بشكل كبير بعد اعتماد النظام."<br>— مسؤول قسم تقنية المعلومات</p>
+    </div>
+  </section>
+
+  <section class="stage">
+    <div class="stage-mark">
+      <span>College IT Support</span>
+      <img src="{{ url_for('static', filename='tvtc-logo.webp') }}" alt="شعار المؤسسة">
+    </div>
+    <div class="card">
+      <p class="card-eyebrow">مرحبًا بعودتك</p>
+      <h1>تسجيل الدخول إلى حسابك</h1>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, message in messages %}
+            <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <form method="POST" action="{{ url_for('login') }}">
+        <div class="field">
+          <label for="email">البريد الإلكتروني</label>
+          <input type="email" id="email" name="email" placeholder="name@example.com" required>
+        </div>
+
+        <div class="field">
+          <label for="password">كلمة المرور</label>
+          <input type="password" id="password" name="password" placeholder="••••••••" required>
+        </div>
+
+        <div class="row">
+          <label class="remember">
+            <input type="checkbox" name="remember">
+            تذكرني
+          </label>
+          <a href="{{ url_for('forgot_password') }}" class="forgot">نسيت كلمة المرور؟</a>
+        </div>
+
+        <div style="text-align:left; margin-bottom:20px;">
+          <a href="{{ url_for('it_login') }}" class="forgot" style="font-size:13px;">دخول فريق الدعم الفني ←</a>
+        </div>
+
+        <button type="submit" class="submit">تسجيل الدخول</button>
+      </form>
+
+      <p class="signup">ليس لديك حساب؟ <a href="{{ url_for('register') }}">أنشئ حسابًا</a></p>
+    </div>
+  </section>
+
+</body>
+</html>

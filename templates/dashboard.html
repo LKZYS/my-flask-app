@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | لوحة التحكم</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0F1A18; --gold:#C8A24A; --sand:#F4EEE1; --line:#E1D9C4; --muted:#7A7263; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--sand);
+    color:var(--ink);
+    min-height:100vh;
+  }
+
+  /* ===== Top bar ===== */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:20px 32px;
+  }
+  .brand-block{ display:flex; flex-direction:column; gap:6px; position:relative; }
+  .profile-chip{
+    display:flex; align-items:center; gap:10px;
+    text-decoration:none;
+    font-family:inherit; color:var(--ink);
+  }
+  .avatar{
+    width:36px; height:36px;
+    border-radius:50%;
+    background:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .avatar svg{ width:18px; height:18px; }
+  .profile-chip .name{ font-weight:600; font-size:14px; }
+  .topbar .logo{font-family:'Tajawal', sans-serif; font-weight:700; font-size:15px; color:var(--muted); text-align:right;}
+
+  .menu-btn{
+    width:44px; height:44px;
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .menu-btn span{ display:block; width:20px; height:2px; background:var(--ink); position:relative; }
+  .menu-btn span::before, .menu-btn span::after{
+    content:""; position:absolute; width:20px; height:2px; background:var(--ink); left:0;
+  }
+  .menu-btn span::before{ top:-6px; }
+  .menu-btn span::after{ top:6px; }
+
+  /* ===== Main content ===== */
+  .content{
+    max-width:1000px;
+    margin:0 auto;
+    padding:12px 24px 60px;
+  }
+  .welcome p{color:var(--muted); font-size:14px; margin-bottom:32px; margin-top:8px;}
+
+  /* ===== Hero ===== */
+  .hero{
+    position:relative; overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+    background:linear-gradient(135deg, rgba(200,162,74,.08), rgba(255,255,255,.6));
+    border:1.5px solid var(--line);
+    border-radius:16px;
+    padding:28px 32px;
+    margin-bottom:32px;
+    box-shadow:0 10px 26px rgba(15,26,24,.05);
+  }
+  .hero::before{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(circle at 12% 120%, rgba(200,162,74,.12), transparent 55%);
+    pointer-events:none;
+  }
+  .hero-text{ position:relative; z-index:1; }
+  .hero-text .eyebrow{ font-size:13px; color:#8A6A22; font-weight:600; margin-bottom:8px; }
+  .hero-text h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:24px; margin-bottom:8px; }
+  .hero-text p{ font-size:14px; color:var(--muted); max-width:36em; }
+  .hero-mark{ width:76px; height:76px; flex-shrink:0; position:relative; z-index:1; }
+  .hero-mark img{ width:100%; height:100%; object-fit:contain; }
+
+  /* ===== Overview stats ===== */
+  .section-heading{
+    display:flex; align-items:center; gap:10px;
+    font-family:'Tajawal', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--muted);
+    margin-bottom:14px;
+  }
+  .section-heading::after{ content:""; flex:1; height:1px; background:var(--line); }
+  .overview-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:16px;
+    margin-bottom:40px;
+  }
+  .overview-card{
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:14px;
+    padding:20px 22px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .overview-card:hover{ transform:translateY(-2px); box-shadow:0 8px 20px rgba(15,26,24,.06); }
+  .overview-card .icon-badge{
+    width:44px; height:44px; border-radius:12px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+    background:rgba(122,114,99,.1);
+  }
+  .overview-card .num{ font-family:'Tajawal', sans-serif; font-size:28px; font-weight:900; color:var(--gold); line-height:1; margin-bottom:6px; }
+  .overview-card .label{ font-size:13px; color:var(--muted); }
+  .overview-card.open{ border-color:rgba(196,98,63,.35); }
+  .overview-card.open .num{ color:#C4623F; }
+  .overview-card.open .icon-badge{ background:rgba(196,98,63,.12); }
+  .overview-card.resolved{ border-color:rgba(46,125,91,.35); }
+  .overview-card.resolved .num{ color:#2E7D5B; }
+  .overview-card.resolved .icon-badge{ background:rgba(46,125,91,.12); }
+  .overview-card.total{ border-color:rgba(122,114,99,.3); }
+  .overview-card.total .num{ color:var(--ink); }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:16px;
+  }
+  .card{
+    background:#fff;
+    border:1.5px solid var(--line);
+    border-radius:14px;
+    padding:22px 20px;
+    text-decoration:none;
+    color:var(--ink);
+    transition:border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+  }
+  .card:hover{ border-color:var(--gold); transform:translateY(-2px); box-shadow:0 8px 20px rgba(15,26,24,.08); }
+  .card .icon-badge{
+    width:44px; height:44px; border-radius:12px; margin-bottom:16px;
+    background:#FBF6EA; border:1px solid var(--line);
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+  }
+  .card .title{ font-weight:600; font-size:15px; margin-bottom:4px; }
+  .card .sub{ font-size:13px; color:var(--muted); }
+
+  /* ===== Side panel ===== */
+  .overlay{ display:none; position:fixed; inset:0; background:rgba(15,26,24,.4); z-index:999; }
+  .overlay.open{ display:block; }
+  .side-panel{
+    position:fixed; top:0; left:0; height:100%; width:260px;
+    background:#fff; box-shadow:4px 0 20px rgba(0,0,0,.08);
+    z-index:1000; transform:translateX(-100%); transition:transform .25s ease;
+    padding:28px 22px;
+  }
+  .side-panel.open{ transform:translateX(0); }
+  .side-panel .sub-label{ font-size:13px; color:var(--muted); margin-bottom:24px; }
+  .side-panel nav{ display:flex; flex-direction:column; gap:4px; }
+  .side-panel nav a{ display:block; padding:11px 12px; border-radius:8px; font-size:14px; color:var(--ink); text-decoration:none; }
+  .side-panel nav a:hover{ background:var(--sand); }
+
+  .panel-profile{ display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+  .panel-profile .pname{ font-weight:700; font-size:15px; margin-bottom:4px; }
+  .panel-profile .prole{ font-size:12px; color:var(--muted); }
+  .avatar-panel{
+    width:44px; height:44px; border-radius:50%; background:var(--ink);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .avatar-panel svg{ width:20px; height:20px; }
+
+  .panel-section{ margin-bottom:24px; }
+  .panel-section .section-label{ font-size:12px; color:var(--muted); margin-bottom:12px; }
+
+  .panel-link{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-radius:10px; background:var(--sand);
+    border:1px solid var(--line);
+    text-decoration:none; color:var(--ink); font-size:14px; font-weight:500;
+    transition:border-color .15s ease;
+  }
+  .panel-link:hover{ border-color:var(--gold); }
+  .panel-link svg{ width:18px; height:18px; color:var(--muted); }
+
+  .stats-row{ display:flex; gap:10px; }
+  .stat-box{
+    flex:1; text-align:center; padding:16px 10px; border-radius:10px;
+    background:var(--sand); border:1px solid var(--line);
+  }
+  .stat-num{ font-size:20px; font-weight:800; margin-bottom:4px; }
+  .stat-label{ font-size:12px; color:var(--muted); }
+
+  .logout-row{ margin-top:8px; margin-bottom:0; }
+  .logout-link{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-radius:10px;
+    color:#C4623F; text-decoration:none; font-size:14px; font-weight:600;
+    transition:background .15s ease;
+  }
+  .logout-link:hover{ background:#FBEAE3; }
+  .logout-link svg{ width:18px; height:18px; }
+
+  .contact-section{
+    margin-top:32px;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+  }
+  .contact-label{ font-size:12px; color:var(--muted); margin-bottom:12px; }
+  .social-link{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 14px;
+    border:1.5px solid var(--line);
+    border-radius:20px;
+    font-size:13px;
+    font-weight:500;
+    color:var(--ink);
+    text-decoration:none;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .social-link:hover{ border-color:var(--ink); background:var(--sand); }
+
+  .social-links-row{ display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+
+  .developer-section{
+    margin-top:24px;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+  }
+  .credit{
+    font-size:13px;
+    color:var(--ink);
+    font-weight:500;
+  }
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .hero{ animation:fadeUp .6s ease .06s both; }
+  .content > .section-heading:nth-of-type(1){ animation:fadeIn .5s ease .18s both; }
+  .content > .section-heading:nth-of-type(2){ animation:fadeIn .5s ease .42s both; }
+  .overview-grid .overview-card{ animation:fadeUp .55s ease both; }
+  .overview-card:nth-child(1){ animation-delay:.22s; }
+  .overview-card:nth-child(2){ animation-delay:.28s; }
+  .overview-card:nth-child(3){ animation-delay:.34s; }
+  .grid .card{ animation:fadeUp .55s ease both; }
+  .grid .card:nth-child(1){ animation-delay:.46s; }
+  .grid .card:nth-child(2){ animation-delay:.52s; }
+  .grid .card:nth-child(3){ animation-delay:.58s; }
+  .grid .card:nth-child(4){ animation-delay:.64s; }
+  @media (prefers-reduced-motion: reduce){
+    .topbar, .hero, .section-heading, .overview-card, .card{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brand-block">
+      <a class="profile-chip" href="{{ url_for('profile') }}">
+        <div class="avatar">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="4" fill="#F4EEE1"/>
+            <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="#F4EEE1" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <span class="name">{{ user }}</span>
+      </a>
+      <span class="logo">College IT Support</span>
+    </div>
+    <button class="menu-btn" id="menuBtn" aria-label="القائمة"><span></span></button>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <aside class="side-panel" id="sidePanel">
+    <div class="panel-profile">
+      <div>
+        <div class="pname">{{ user }}</div>
+        <div class="prole">طالب</div>
+      </div>
+      <div class="avatar-panel">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="8" r="4" fill="#F4EEE1"/>
+          <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="#F4EEE1" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <p class="section-label">روابط سريعة</p>
+      <a href="{{ url_for('profile') }}" class="panel-link">
+        <span>الملف الشخصي</span>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </a>
+    </div>
+
+    <div class="contact-section">
+      <p class="contact-label">تواصل معنا</p>
+      <div class="social-links-row">
+        <a href="https://x.com/tvtc_g_mahd" target="_blank" rel="noopener" class="social-link">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+          <span>tvtc</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="developer-section">
+      <p class="contact-label">المطوّر</p>
+      <p class="credit">Abdullah Alfaife</p>
+      <div class="social-links-row" style="margin-top:10px;">
+        <a href="https://www.tiktok.com/@99l445" target="_blank" rel="noopener" class="social-link">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M16.6 5.82c-1.02-.88-1.66-2.17-1.66-3.62h-3.14v13.3c0 1.6-1.3 2.9-2.9 2.9-1.6 0-2.9-1.3-2.9-2.9s1.3-2.9 2.9-2.9c.3 0 .58.05.85.13V9.55a6.1 6.1 0 0 0-.85-.06 6.06 6.06 0 1 0 6.06 6.06V8.6a8.16 8.16 0 0 0 4.77 1.53V7c-1.1 0-2.13-.35-2.97-.95l-.16-.23z"/>
+          </svg>
+          <span>@99l445</span>
+        </a>
+
+        <a href="https://www.instagram.com/99l445" target="_blank" rel="noopener" class="social-link">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.47 1.38.9.42.42.67.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.47.96-.9 1.38-.42.42-.82.67-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.47-1.38-.9-.42-.42-.67-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.47-.96.9-1.38.42-.42.82-.67 1.38-.9.42-.16 1.06-.36 2.23-.41 1.27-.06 1.65-.07 4.85-.07zm0-2.16c-3.26 0-3.66.01-4.94.07-1.28.06-2.15.26-2.91.56-.79.31-1.46.72-2.13 1.39C1.35 2.72.94 3.39.62 4.18c-.3.76-.5 1.63-.56 2.91C0 8.37 0 8.77 0 12s.01 3.63.07 4.91c.06 1.28.26 2.15.56 2.91.31.79.72 1.46 1.39 2.13.67.67 1.34 1.08 2.13 1.39.76.3 1.63.5 2.91.56 1.28.06 1.68.07 4.94.07s3.66-.01 4.94-.07c1.28-.06 2.15-.26 2.91-.56.79-.31 1.46-.72 2.13-1.39.67-.67 1.08-1.34 1.39-2.13.3-.76.5-1.63.56-2.91.06-1.28.07-1.68.07-4.94s-.01-3.66-.07-4.94c-.06-1.28-.26-2.15-.56-2.91-.31-.79-.72-1.46-1.39-2.13C20.72 1.35 20.05.94 19.26.62c-.76-.3-1.63-.5-2.91-.56C15.07 0 14.67 0 12 0z"/>
+            <path d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/>
+            <circle cx="18.41" cy="5.59" r="1.44"/>
+          </svg>
+          <span>@99l445</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="panel-section logout-row">
+      <a href="{{ url_for('logout') }}" class="logout-link">
+        <span>تسجيل الخروج</span>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 3H19C19.5523 3 20 3.44772 20 4V20C20 20.5523 19.5523 21 19 21H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 12H3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <main class="content">
+    <section class="hero">
+      <div class="hero-text">
+        <p class="eyebrow">College IT Support</p>
+        <h1>مرحبًا، {{ user }}</h1>
+        <p>تابع بلاغاتك التقنية وأرسل بلاغ جديد من مكان واحد.</p>
+      </div>
+      <div class="hero-mark">
+        <img src="{{ url_for('static', filename='tvtc-logo.webp') }}" alt="شعار المؤسسة">
+      </div>
+    </section>
+
+    <p class="section-heading">نظرة عامة</p>
+    <div class="overview-grid">
+      <div class="overview-card total">
+        <div class="icon-badge">📊</div>
+        <div>
+          <div class="num">{{ total_tickets }}</div>
+          <div class="label">إجمالي بلاغاتي</div>
+        </div>
+      </div>
+      <div class="overview-card open">
+        <div class="icon-badge">⏳</div>
+        <div>
+          <div class="num">{{ open_tickets }}</div>
+          <div class="label">بلاغات قيد المتابعة</div>
+        </div>
+      </div>
+      <div class="overview-card resolved">
+        <div class="icon-badge">✅</div>
+        <div>
+          <div class="num">{{ resolved_tickets }}</div>
+          <div class="label">بلاغات تم حلها</div>
+        </div>
+      </div>
+    </div>
+
+    <p class="section-heading">روابط سريعة</p>
+    <div class="grid">
+      <a href="{{ url_for('new_ticket') }}" class="card">
+        <div class="icon-badge">🛠️</div>
+        <div class="title">بلاغ جديد</div>
+        <div class="sub">أبلغ عن مشكلة تقنية</div>
+      </a>
+      <a href="{{ url_for('my_tickets') }}" class="card">
+        <div class="icon-badge">📋</div>
+        <div class="title">بلاغاتي</div>
+        <div class="sub">متابعة حالة بلاغاتك</div>
+      </a>
+      <a href="#" class="card">
+        <div class="icon-badge">💬</div>
+        <div class="title">الدعم الفني</div>
+        <div class="sub">تواصل مباشر مع الفريق</div>
+      </a>
+      <a href="{{ url_for('about_college') }}" class="card">
+        <div class="icon-badge">🏫</div>
+        <div class="title">عن الكلية</div>
+        <div class="sub">تعرّف على الكلية وأقسامها</div>
+      </a>
+    </div>
+  </main>
+
+  <script>
+    const menuBtn = document.getElementById('menuBtn');
+    const sidePanel = document.getElementById('sidePanel');
+    const overlay = document.getElementById('overlay');
+
+    function toggleMenu(){
+      sidePanel.classList.toggle('open');
+      overlay.classList.toggle('open');
+    }
+
+    menuBtn.addEventListener('click', toggleMenu);
+    overlay.addEventListener('click', toggleMenu);
+  </script>
+</body>
+</html>

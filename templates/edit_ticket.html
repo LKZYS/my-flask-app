@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | تعديل البلاغ</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0F1A18; --gold:#C8A24A; --sand:#F4EEE1; --line:#E1D9C4; --muted:#7A7263; --error:#C4623F; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--sand);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .topbar{ display:flex; align-items:center; padding:20px 32px; }
+  .back-link{
+    color:var(--ink); text-decoration:none; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:8px;
+    background:#fff; border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; transition:border-color .15s ease, background .15s ease;
+  }
+  .back-link svg{ width:16px; height:16px; flex-shrink:0; }
+  .back-link:hover{ border-color:var(--gold); background:#FBF8F0; }
+
+  .content{ max-width:540px; margin:0 auto; padding:20px 24px 60px; }
+  .content h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:24px; margin-bottom:6px; }
+  .content .sub{ color:var(--muted); font-size:14px; margin-bottom:28px; }
+
+  .flash{
+    background:#FBEAE3; border:1px solid var(--error); color:#8A3B22;
+    font-size:14px; padding:12px 16px; border-radius:8px; margin-bottom:20px;
+  }
+  .flash-success{
+    background:#E6F4EC;
+    border-color:#2E7D5B;
+    color:#1E5A3F;
+  }
+
+  .card{ background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:28px; }
+
+  .field{ margin-bottom:20px; }
+  .field label{ display:block; font-size:14px; font-weight:500; margin-bottom:8px; color:#3C382F; }
+  .field input, .field textarea{
+    width:100%; padding:14px 16px; font-family:inherit; font-size:15px; color:var(--ink);
+    background:#fff; border:1.5px solid var(--line); border-radius:8px; outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field textarea{ resize:vertical; min-height:120px; }
+  .field input:focus, .field textarea:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(200,162,74,.22); }
+
+  .submit{
+    width:100%; height:52px; border:none; border-radius:8px;
+    background:var(--ink); color:var(--sand); font-family:inherit; font-size:16px; font-weight:500;
+    cursor:pointer; transition:background .15s ease;
+  }
+  .submit:hover{ background:#1B322C; }
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .content h1{ animation:fadeUp .55s ease .08s both; }
+  .content .sub{ animation:fadeIn .5s ease .16s both; }
+  .flash{ animation:fadeUp .5s ease both; }
+  .card{ animation:fadeUp .55s ease .22s both; }
+  .field:nth-of-type(1){ animation:fadeUp .5s ease .3s both; }
+  .field:nth-of-type(2){ animation:fadeUp .5s ease .36s both; }
+  .submit{ animation:fadeUp .5s ease .42s both; }
+  @media (prefers-reduced-motion: reduce){
+    .topbar, .content h1, .content .sub, .flash, .card, .field, .submit{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a class="back-link" href="{{ url_for('my_tickets') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع لبلاغاتي</a>
+  </div>
+
+  <main class="content">
+    <h1>تعديل البلاغ <span style="color:var(--muted); font-weight:400; font-size:16px;">#{{ ticket[0] }}</span></h1>
+    <p class="sub">عدّل عنوان أو وصف المشكلة ثم احفظ التغييرات</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card">
+      <form method="POST">
+        <div class="field">
+          <label for="title">عنوان المشكلة</label>
+          <input type="text" id="title" name="title" value="{{ ticket[2] }}" required>
+        </div>
+
+        <div class="field">
+          <label for="description">وصف المشكلة</label>
+          <textarea id="description" name="description" required>{{ ticket[3] }}</textarea>
+        </div>
+
+        <button type="submit" class="submit">حفظ التعديلات</button>
+      </form>
+    </div>
+  </main>
+
+</body>
+</html>

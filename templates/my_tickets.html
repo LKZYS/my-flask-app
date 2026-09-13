@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | بلاغاتي</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0F1A18; --gold:#C8A24A; --sand:#F4EEE1; --line:#E1D9C4; --muted:#7A7263; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--sand);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 32px;
+  }
+  .back-link{
+    color:var(--ink); text-decoration:none; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:8px;
+    background:#fff; border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; transition:border-color .15s ease, background .15s ease;
+  }
+  .back-link svg{ width:16px; height:16px; flex-shrink:0; }
+  .back-link:hover{ border-color:var(--gold); background:#FBF8F0; }
+
+  .new-btn{
+    background:var(--ink); color:var(--sand); text-decoration:none;
+    padding:10px 18px; border-radius:8px; font-size:14px; font-weight:500;
+  }
+
+  .content{ max-width:700px; margin:0 auto; padding:20px 24px 60px; }
+  .content h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:24px; margin-bottom:6px; }
+  .content .sub{ color:var(--muted); font-size:14px; margin-bottom:28px; }
+
+  .card{ background:#fff; border:1.5px solid var(--line); border-radius:12px; padding:8px 24px; }
+  .empty{ padding:32px 8px; text-align:center; color:var(--muted); font-size:14px; }
+
+  .ticket-row{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    padding:20px 0; border-bottom:1px solid var(--line);
+  }
+  .ticket-row:last-child{ border-bottom:none; }
+  .ticket-title{ font-weight:600; font-size:15px; margin-bottom:6px; }
+  .ticket-id{ font-size:12px; color:var(--muted); font-weight:400; margin-right:6px; }
+  .ticket-desc{ font-size:13px; color:var(--muted); margin-bottom:8px; max-width:440px; }
+  .ticket-meta{ font-size:12px; color:var(--muted); }
+
+  .badge{
+    display:inline-block; padding:5px 14px; border-radius:20px;
+    font-size:12px; font-weight:600; background:#C4623F; color:#fff;
+    flex-shrink:0; margin-right:12px;
+  }
+  .badge.cancelled{ background:#8A8A8A; }
+  .badge.working{ background:#D9A72A; color:#2A2205; }
+  .badge.resolved{ background:#2E7D5B; }
+
+  .actions{ display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+  .cancel-btn{
+    background:none; border:1.5px solid var(--line); color:var(--muted);
+    font-family:inherit; font-size:12px; padding:6px 14px; border-radius:20px;
+    cursor:pointer; transition:border-color .15s ease, color .15s ease;
+  }
+  .cancel-btn:hover{ border-color:#C4623F; color:#C4623F; }
+
+  .edit-btn{
+    background:none; border:1.5px solid var(--line); color:var(--muted);
+    font-family:inherit; font-size:12px; padding:6px 14px; border-radius:20px;
+    cursor:pointer; text-decoration:none; display:inline-block;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .edit-btn:hover{ border-color:var(--gold); color:#8A6A22; }
+
+  .btn-row{ display:flex; gap:8px; }
+
+  .flash{
+    background:#FBEAE3; border:1px solid #C4623F; color:#8A3B22;
+    font-size:14px; padding:12px 16px; border-radius:8px; margin-bottom:20px;
+  }
+  .flash-success{
+    background:#E6F4EC;
+    border-color:#2E7D5B;
+    color:#1E5A3F;
+  }
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .content h1{ animation:fadeUp .55s ease .08s both; }
+  .content .sub{ animation:fadeIn .5s ease .16s both; }
+  .card{ animation:fadeUp .55s ease .22s both; }
+  .ticket-row{ animation:fadeUp .5s ease both; animation-delay:.3s; }
+  .ticket-row:nth-child(2){ animation-delay:.36s; }
+  .ticket-row:nth-child(3){ animation-delay:.42s; }
+  .ticket-row:nth-child(4){ animation-delay:.48s; }
+  .ticket-row:nth-child(n+5){ animation-delay:.54s; }
+  @media (prefers-reduced-motion: reduce){
+    .topbar, .content h1, .content .sub, .card, .ticket-row{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a class="back-link" href="{{ url_for('dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
+    <a class="new-btn" href="{{ url_for('new_ticket') }}">+ بلاغ جديد</a>
+  </div>
+
+  <main class="content">
+    <h1>بلاغاتي</h1>
+    <p class="sub">جميع البلاغات اللي رفعتها وحالتها الحالية</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card">
+      {% if tickets %}
+        {% for t in tickets %}
+          <div class="ticket-row">
+            <div>
+              <div class="ticket-title">{{ t[2] }} <span class="ticket-id">#{{ t[0] }}</span></div>
+              <div class="ticket-desc">{{ t[3] }}</div>
+              <div class="ticket-meta">{{ t[5] }}</div>
+            </div>
+            <div class="actions">
+              <span class="badge {{ 'cancelled' if t[4] == 'ملغى' else ('working' if t[4] == 'جاري العمل عليه' else ('resolved' if t[4] == 'تم حل الطلب' else '')) }}">{{ t[4] }}</span>
+              {% if t[4] != 'ملغى' and t[4] != 'تم حل الطلب' %}
+                <div class="btn-row">
+                  {% if t[6] != '1' %}
+                    <a href="{{ url_for('edit_ticket', ticket_id=t[0]) }}" class="edit-btn">تعديل</a>
+                  {% endif %}
+                  <form method="POST" action="{{ url_for('cancel_ticket_route', ticket_id=t[0]) }}" onsubmit="return confirm('هل أنت متأكد من إلغاء هذا البلاغ؟');">
+                    <button type="submit" class="cancel-btn">إلغاء البلاغ</button>
+                  </form>
+                </div>
+              {% endif %}
+            </div>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty">لا توجد بلاغات بعد. اضغط "بلاغ جديد" لإنشاء أول بلاغ.</div>
+      {% endif %}
+    </div>
+  </main>
+
+</body>
+</html>

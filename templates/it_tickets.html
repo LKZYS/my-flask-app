@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | بلاغات الطلاب</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0F1A18; --panel:rgba(244,238,225,.05); --gold:#C8A24A; --sand:#F4EEE1; --line:rgba(244,238,225,.14); --muted:rgba(244,238,225,.55); }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--ink);
+    color:var(--sand);
+    min-height:100vh;
+  }
+
+  .topbar{
+    display:flex; align-items:center;
+    padding:20px 32px;
+  }
+  .back-link{
+    color:var(--sand); text-decoration:none; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(244,238,225,.06); border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; transition:border-color .15s ease, background .15s ease;
+  }
+  .back-link svg{ width:16px; height:16px; flex-shrink:0; }
+  .back-link:hover{ border-color:var(--gold); background:rgba(244,238,225,.1); }
+
+  .content{ max-width:760px; margin:0 auto; padding:20px 24px 60px; }
+  .content h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:24px; margin-bottom:6px; color:var(--gold); }
+  .content .sub{ color:var(--muted); font-size:14px; margin-bottom:28px; }
+  .empty{ padding:40px 8px; text-align:center; color:var(--muted); font-size:14px; background:var(--panel); border:1.5px solid var(--line); border-radius:12px; }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:16px;
+    align-items:start;
+  }
+
+  details.student-card{
+    background:var(--panel);
+    border:1.5px solid var(--line);
+    border-radius:12px;
+    overflow:hidden;
+  }
+  details.student-card[open]{ border-color:var(--gold); }
+
+  summary{
+    list-style:none;
+    cursor:pointer;
+    padding:24px 20px;
+    display:flex; flex-direction:column;
+  }
+  summary::-webkit-details-marker{ display:none; }
+  summary:hover{ background:rgba(244,238,225,.03); }
+
+  .icon{ margin-bottom:14px; }
+  .icon img{ width:64px; height:64px; object-fit:contain; }
+  .student-name{ font-weight:600; font-size:15px; margin-bottom:4px; word-break:break-word; }
+  .training-number{ font-size:13px; color:var(--muted); font-family:monospace; }
+
+  .ticket-list{
+    padding:0 20px 20px;
+    display:flex; flex-direction:column; gap:10px;
+    border-top:1px solid var(--line);
+    margin-top:0;
+    padding-top:16px;
+  }
+  .ticket-item{
+    background:rgba(0,0,0,.15);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+  }
+  .ticket-title{ font-weight:600; font-size:13px; margin-bottom:5px; }
+  .ticket-id{ font-size:11px; color:var(--muted); font-weight:400; margin-right:4px; }
+  .ticket-desc{ font-size:12px; color:var(--muted); margin-bottom:8px; line-height:1.6; }
+  .ticket-foot{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+  .ticket-date{ font-size:11px; color:var(--muted); }
+
+  .badge{
+    display:inline-block; padding:3px 10px; border-radius:20px;
+    font-size:10px; font-weight:600; background:#C4623F; color:#fff;
+    flex-shrink:0; white-space:nowrap;
+  }
+  .badge.cancelled{ background:rgba(244,238,225,.15); color:var(--muted); }
+  .badge.working{ background:#D9A72A; color:#2A2205; }
+  .badge.resolved{ background:#2E7D5B; color:#fff; }
+
+  .status-form{ display:flex; align-items:center; }
+  .status-select{
+    background:rgba(244,238,225,.06); color:var(--sand);
+    border:1.5px solid var(--line); border-radius:20px;
+    padding:4px 10px; font-family:inherit; font-size:11px;
+    cursor:pointer; outline:none;
+  }
+  .status-select:focus{ border-color:var(--gold); }
+  .status-select.st-cancelled{ background:rgba(244,238,225,.15); color:var(--muted); cursor:not-allowed; }
+  .status-select.st-progress{ border-color:#C4623F; }
+  .status-select.st-working{ border-color:#D9A72A; }
+  .status-select.st-resolved{ border-color:#2E7D5B; }
+
+  /* القائمة المنسدلة نفسها تُرسم بألوان النظام الافتراضية من المتصفح
+     لذا نحدد لها خلفية وخط واضحين بشكل صريح */
+  .status-select option{
+    background:#FFFFFF;
+    color:var(--ink);
+    font-weight:600;
+    padding:8px;
+  }
+  .status-select option:checked{
+    background:#EFE6CD;
+    color:var(--ink);
+  }
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .content h1{ animation:fadeUp .55s ease .08s both; }
+  .content .sub{ animation:fadeIn .5s ease .16s both; }
+  .empty{ animation:fadeUp .55s ease .22s both; }
+  .student-card{ animation:fadeUp .5s ease both; animation-delay:.24s; }
+  .student-card:nth-child(2){ animation-delay:.3s; }
+  .student-card:nth-child(3){ animation-delay:.36s; }
+  .student-card:nth-child(4){ animation-delay:.42s; }
+  .student-card:nth-child(n+5){ animation-delay:.48s; }
+  @media (prefers-reduced-motion: reduce){
+    .topbar, .content h1, .content .sub, .empty, .student-card{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a class="back-link" href="{{ url_for('it_dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
+  </div>
+
+  <main class="content">
+    <h1>بلاغات الطلاب</h1>
+    <p class="sub">اضغط على بطاقة الطالب لعرض بلاغاته</p>
+
+    {% if students %}
+      <div class="grid">
+        {% for s in students %}
+          <details class="student-card">
+            <summary>
+              <div class="icon"><img src="{{ url_for('static', filename='tvtc-logo.webp') }}" alt="شعار المؤسسة"></div>
+              <div class="student-name">{{ s.full_name }}</div>
+              <div class="training-number">{{ s.training_number }}</div>
+            </summary>
+            <div class="ticket-list">
+              {% for t in s.tickets %}
+                <div class="ticket-item">
+                  <div class="ticket-title">{{ t[2] }} <span class="ticket-id">#{{ t[0] }}</span></div>
+                  <div class="ticket-desc">{{ t[3] }}</div>
+                  <div class="ticket-foot">
+                    <span class="ticket-date">{{ t[5] }}</span>
+                    {% if t[4] == 'ملغى' %}
+                      <span class="badge cancelled">ملغى</span>
+                    {% else %}
+                      <form class="status-form" method="POST" action="{{ url_for('update_ticket_status_route', ticket_id=t[0]) }}">
+                        <select name="status" class="status-select {{ 'st-progress' if t[4] == 'قيد التنفيذ' else ('st-working' if t[4] == 'جاري العمل عليه' else 'st-resolved') }}" onchange="this.form.submit()">
+                          {% for s in statuses %}
+                            <option value="{{ s }}" {{ 'selected' if t[4] == s }}>{{ s }}</option>
+                          {% endfor %}
+                        </select>
+                      </form>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </details>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">لا توجد بلاغات واردة حاليًا.</div>
+    {% endif %}
+  </main>
+
+</body>
+</html>
