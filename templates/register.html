@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | إنشاء حساب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1A18;
+    --gold:#C8A24A;
+    --sand:#F4EEE1;
+    --error:#C4623F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--sand);
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:24px;
+  }
+  a{color:inherit;}
+
+  .card{width:100%; max-width:400px;}
+  .card-eyebrow{font-size:14px; color:#7A7263;}
+  .card h1{font-family:'Tajawal', sans-serif; font-weight:700; font-size:30px; margin-top:8px; margin-bottom:28px;}
+
+  .flash{
+    background:#FBEAE3;
+    border:1px solid var(--error);
+    color:#8A3B22;
+    font-size:14px;
+    padding:12px 16px;
+    border-radius:8px;
+    margin-bottom:20px;
+  }
+  .flash-success{
+    background:#E6F4EC;
+    border-color:#2E7D5B;
+    color:#1E5A3F;
+  }
+
+  .field{margin-bottom:20px;}
+  .field label{display:block; font-size:14px; font-weight:500; margin-bottom:8px; color:#3C382F;}
+  .field input{
+    width:100%; height:50px; padding:0 16px;
+    font-family:inherit; font-size:15px; color:var(--ink);
+    background:#fff; border:1.5px solid #E1D9C4; border-radius:8px;
+    outline:none; transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input::placeholder{color:#B7AE99;}
+  .field input:focus{border-color:var(--gold); box-shadow:0 0 0 3px rgba(200,162,74,.22);}
+  .field .hint{font-size:12px; color:#7A7263; margin-top:6px;}
+  .field .error-hint{color:var(--error); display:none;}
+
+  .submit{
+    width:100%; height:52px; border:none; border-radius:8px;
+    background:var(--ink); color:var(--sand);
+    font-family:inherit; font-size:16px; font-weight:500;
+    cursor:pointer; margin-top:8px;
+    transition:background .15s ease;
+  }
+  .submit:hover{background:#1B322C;}
+
+  .signin{margin-top:32px; text-align:center; font-size:14px; color:#7A7263;}
+  .signin a{color:var(--ink); font-weight:600; text-decoration:none;}
+  .signin a:hover{text-decoration:underline;}
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .card-eyebrow{ animation:fadeUp .6s ease both; }
+  .card h1{ animation:fadeUp .6s ease .06s both; }
+  .flash{ animation:fadeUp .5s ease both; }
+  .field{ animation:fadeUp .55s ease both; }
+  .field:nth-of-type(1){ animation-delay:.14s; }
+  .field:nth-of-type(2){ animation-delay:.2s; }
+  .field:nth-of-type(3){ animation-delay:.26s; }
+  .field:nth-of-type(4){ animation-delay:.32s; }
+  .field:nth-of-type(5){ animation-delay:.38s; }
+  .field:nth-of-type(6){ animation-delay:.44s; }
+  .submit{ animation:fadeUp .55s ease .5s both; }
+  .signin{ animation:fadeIn .6s ease .58s both; }
+  @media (prefers-reduced-motion: reduce){
+    .card-eyebrow, .card h1, .flash, .field, .submit, .signin{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="card">
+    <p class="card-eyebrow">مرحبًا بك في College IT Support</p>
+    <h1>إنشاء حساب جديد</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('register') }}">
+      <div class="field">
+        <label for="full_name">الاسم الكامل</label>
+        <input type="text" id="full_name" name="full_name" placeholder="اسمك الكامل" required>
+      </div>
+
+      <div class="field">
+        <label for="training_number">الرقم التدريبي</label>
+        <input type="text" id="training_number" name="training_number" placeholder="رقمك التدريبي" inputmode="numeric" maxlength="9" required>
+        <p class="hint error-hint" id="trainingNumberHint">الحد الأقصى 9 أرقام</p>
+      </div>
+
+      <div class="field">
+        <label for="birthdate">تاريخ الميلاد</label>
+        <input type="date" id="birthdate" name="birthdate" max="{{ max_birthdate }}" required>
+      </div>
+
+      <div class="field">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" name="email" placeholder="name@example.com" required>
+      </div>
+
+      <div class="field">
+        <label for="password">كلمة المرور</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required>
+      </div>
+
+      <div class="field">
+        <label for="confirm_password">تأكيد كلمة المرور</label>
+        <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" required>
+        <p class="hint error-hint" id="mismatchHint">كلمتا المرور غير متطابقتين</p>
+      </div>
+
+      <button type="submit" class="submit">إنشاء الحساب</button>
+    </form>
+
+    <p class="signin">لديك حساب بالفعل؟ <a href="{{ url_for('login') }}">سجّل دخولك</a></p>
+  </div>
+
+  <script>
+    const form = document.querySelector("form");
+    const password = document.getElementById("password");
+    const confirmPassword = document.getElementById("confirm_password");
+    const mismatchHint = document.getElementById("mismatchHint");
+    const trainingNumber = document.getElementById("training_number");
+    const trainingNumberHint = document.getElementById("trainingNumberHint");
+
+    function checkTrainingNumber(){
+      if (trainingNumber.value.length > 9){
+        trainingNumberHint.style.display = "block";
+        trainingNumber.setCustomValidity("الحد الأقصى 9 أرقام");
+      } else {
+        trainingNumberHint.style.display = "none";
+        trainingNumber.setCustomValidity("");
+      }
+    }
+
+    trainingNumber.addEventListener("input", checkTrainingNumber);
+
+    function checkMatch(){
+      if (confirmPassword.value && password.value !== confirmPassword.value){
+        mismatchHint.style.display = "block";
+        confirmPassword.setCustomValidity("كلمتا المرور غير متطابقتين");
+      } else {
+        mismatchHint.style.display = "none";
+        confirmPassword.setCustomValidity("");
+      }
+    }
+
+    password.addEventListener("input", checkMatch);
+    confirmPassword.addEventListener("input", checkMatch);
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | لوحة الفني</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0F1A18; --ink-soft:#16241F; --gold:#C8A24A; --sand:#F4EEE1; --line:rgba(244,238,225,.14); --muted:rgba(244,238,225,.55); }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:
+      radial-gradient(circle at 90% -5%, rgba(200,162,74,.10), transparent 40%),
+      radial-gradient(circle at 5% 20%, rgba(63,168,199,.06), transparent 35%),
+      var(--ink);
+    color:var(--sand);
+    min-height:100vh;
+  }
+
+  /* ===== Top bar ===== */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:20px 32px;
+    position:sticky; top:0; z-index:50;
+    background:rgba(15,26,24,.75);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+  }
+  .brand-block{ display:flex; flex-direction:column; gap:6px; position:relative; }
+  .profile-chip{
+    display:flex; align-items:center; gap:10px;
+    text-decoration:none;
+    font-family:inherit; color:var(--sand);
+    padding:6px 10px 6px 6px; border-radius:30px;
+    transition:background .15s ease;
+  }
+  .profile-chip:hover{ background:rgba(244,238,225,.06); }
+  .avatar{
+    width:36px; height:36px;
+    border-radius:50%;
+    background:var(--gold);
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .avatar svg{ width:18px; height:18px; }
+  .profile-chip .name{ font-weight:600; font-size:14px; }
+  .topbar .logo{font-family:'Tajawal', sans-serif; font-weight:700; font-size:15px; color:var(--muted); text-align:right;}
+
+  .menu-btn{
+    width:44px; height:44px;
+    background:rgba(244,238,225,.06);
+    border:1.5px solid var(--line);
+    border-radius:14px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    flex-shrink:0;
+    transition:border-color .15s ease, transform .15s ease;
+  }
+  .menu-btn:hover{ border-color:var(--gold); transform:translateY(-1px); }
+  .menu-btn span{ display:block; width:20px; height:2px; background:var(--sand); position:relative; }
+  .menu-btn span::before, .menu-btn span::after{
+    content:""; position:absolute; width:20px; height:2px; background:var(--sand); left:0;
+  }
+  .menu-btn span::before{ top:-6px; }
+  .menu-btn span::after{ top:6px; }
+
+  /* ===== Page layout (center content + side rail on wide screens) ===== */
+  .page-layout{
+    display:flex;
+    gap:24px;
+    max-width:1500px;
+    margin:0 auto;
+    align-items:flex-start;
+    justify-content:center;
+  }
+
+  /* ===== Main content ===== */
+  .content{
+    max-width:1000px;
+    flex:1 1 1000px;
+    margin:0;
+    padding:12px 24px 60px;
+  }
+
+  /* ===== Side rail (ticket workflow + team FAQ) ===== */
+  .side-rail{
+    width:320px; flex:0 0 320px;
+    position:sticky; top:96px;
+    margin-top:12px;
+  }
+  @media (max-width: 1380px){ .side-rail{ display:none; } }
+
+  .side-card{
+    position:relative; overflow:hidden;
+    background:linear-gradient(160deg, #16241F 0%, #1B2C26 60%, #10201B 100%);
+    color:var(--sand); border:1px solid var(--line); border-radius:16px;
+    padding:28px 26px;
+    box-shadow:0 18px 40px rgba(0,0,0,.35);
+  }
+  .side-card::after{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(circle at 90% 0%, rgba(200,162,74,.14), transparent 55%);
+    pointer-events:none;
+  }
+  .side-card h2{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:16px; color:var(--gold); margin-bottom:22px; position:relative; }
+
+  .steps{ list-style:none; display:flex; flex-direction:column; gap:22px; position:relative; }
+  .steps li{ display:flex; gap:14px; }
+  .step-num{
+    width:26px; height:26px; border-radius:50%; flex-shrink:0;
+    background:rgba(200,162,74,.16); border:1px solid rgba(200,162,74,.4); color:var(--gold);
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700;
+  }
+  .step-title{ font-size:14px; font-weight:600; margin-bottom:4px; }
+  .step-desc{ font-size:12.5px; line-height:1.7; color:rgba(244,238,225,.6); }
+
+  .side-note{
+    margin-top:26px; padding-top:20px; border-top:1px solid rgba(244,238,225,.12);
+    font-size:12px; line-height:1.8; color:rgba(244,238,225,.5); position:relative;
+  }
+
+  .faq{ margin-top:26px; padding-top:22px; border-top:1px solid rgba(244,238,225,.12); position:relative; }
+  .faq h2{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:16px; color:var(--gold); margin-bottom:14px; }
+  .faq-item + .faq-item{ margin-top:8px; }
+  .faq-item summary{
+    list-style:none; cursor:pointer; font-size:13px; font-weight:600; color:var(--sand);
+    padding:12px 4px; display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .faq-item summary::-webkit-details-marker{ display:none; }
+  .faq-item summary::after{ content:"+"; color:var(--gold); font-size:16px; flex-shrink:0; transition:transform .2s ease; }
+  .faq-item[open] summary::after{ transform:rotate(45deg); }
+  .faq-item p{ font-size:12.5px; line-height:1.75; color:rgba(244,238,225,.55); padding:0 4px 12px; }
+  .faq-item[open] p{ animation:faqReveal .3s ease; }
+  @keyframes faqReveal{ from{ opacity:0; transform:translateY(-6px); } to{ opacity:1; transform:translateY(0); } }
+  .faq-item{ border-bottom:1px solid rgba(244,238,225,.08); }
+  .faq-item:last-child{ border-bottom:none; }
+
+  /* ===== Hero ===== */
+  .hero{
+    position:relative; overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:24px;
+    background:linear-gradient(150deg, var(--ink) 0%, #16241F 55%, #10201B 100%);
+    border-radius:22px;
+    padding:36px 40px;
+    margin-bottom:36px;
+    box-shadow:0 20px 45px rgba(0,0,0,.3);
+  }
+  .hero-blob-gold{
+    position:absolute; left:-10%; bottom:-30%; width:50%; aspect-ratio:1; border-radius:50%;
+    background:radial-gradient(circle at 40% 40%, rgba(200,162,74,.4), transparent 70%);
+    filter:blur(8px); animation:blobFloat 10s ease-in-out infinite; pointer-events:none;
+  }
+  .hero-blob-teal{
+    position:absolute; right:-6%; top:-30%; width:40%; aspect-ratio:1; border-radius:50%;
+    background:radial-gradient(circle at 60% 40%, rgba(63,168,199,.28), transparent 70%);
+    filter:blur(10px); animation:blobFloat 13s ease-in-out infinite reverse; pointer-events:none;
+  }
+  @keyframes blobFloat{
+    0%, 100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(3%, -4%) scale(1.08); }
+  }
+  .hero-text{ position:relative; z-index:1; }
+  .hero-text .eyebrow{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--gold); font-weight:700; margin-bottom:14px; letter-spacing:.4px;
+    background:rgba(200,162,74,.14); border:1px solid rgba(200,162,74,.35);
+    padding:5px 14px; border-radius:20px;
+  }
+  .hero-text h1{
+    font-family:'Tajawal', sans-serif; font-weight:900; font-size:clamp(24px, 3vw, 30px);
+    margin-bottom:8px; letter-spacing:-.5px; color:var(--sand);
+  }
+  .hero-text p{ font-size:14px; color:rgba(244,238,225,.65); max-width:36em; }
+  .hero-mark{
+    width:76px; height:76px; flex-shrink:0; position:relative; z-index:1;
+    filter:drop-shadow(0 10px 20px rgba(0,0,0,.35));
+    animation:heroFloat 5s ease-in-out infinite;
+  }
+  .hero-mark img{ width:100%; height:100%; object-fit:contain; }
+  @keyframes heroFloat{
+    0%, 100%{ transform:translateY(0); }
+    50%{ transform:translateY(-8px); }
+  }
+
+  /* ===== Overview stats ===== */
+  .section-heading{
+    display:flex; align-items:center; gap:10px;
+    font-family:'Tajawal', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--muted);
+    margin-bottom:14px;
+  }
+  .section-heading::after{ content:""; flex:1; height:1px; background:var(--line); }
+  .overview-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
+    gap:16px;
+    margin-bottom:40px;
+  }
+  .overview-card{
+    background:rgba(244,238,225,.05);
+    border:1px solid var(--line);
+    border-radius:18px;
+    padding:22px 22px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    transition:transform .2s cubic-bezier(.2,.8,.2,1), box-shadow .2s ease, background .2s ease;
+  }
+  .overview-card:hover{ transform:translateY(-4px); background:rgba(244,238,225,.07); box-shadow:0 16px 32px rgba(0,0,0,.28); }
+  .overview-card .icon-badge{
+    width:48px; height:48px; border-radius:14px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background:linear-gradient(135deg, rgba(244,238,225,.10), rgba(244,238,225,.03));
+    box-shadow:inset 0 0 0 1px rgba(244,238,225,.1);
+  }
+  .icon-badge svg{ width:20px; height:20px; }
+  .overview-card .num{ font-family:'Tajawal', sans-serif; font-size:30px; font-weight:900; color:var(--gold); line-height:1; margin-bottom:6px; }
+  .overview-card .label{ font-size:13px; color:var(--muted); font-weight:500; }
+  .overview-card.resolved .num{ color:#5FBE8E; }
+  .overview-card.resolved .icon-badge{ color:#5FBE8E; background:linear-gradient(135deg, rgba(46,125,91,.26), rgba(46,125,91,.06)); box-shadow:inset 0 0 0 1px rgba(46,125,91,.3); }
+  .overview-card.pending{ border-color:rgba(217,167,42,.4); background:rgba(217,167,42,.06); }
+  .overview-card.pending .num{ color:#D9A72A; }
+  .overview-card.pending .icon-badge{ color:#D9A72A; background:linear-gradient(135deg, rgba(217,167,42,.26), rgba(217,167,42,.06)); box-shadow:inset 0 0 0 1px rgba(217,167,42,.3); }
+  .overview-card.students .num{ color:#7FA8D9; }
+  .overview-card.students .icon-badge{ color:#7FA8D9; background:linear-gradient(135deg, rgba(105,150,199,.26), rgba(105,150,199,.06)); box-shadow:inset 0 0 0 1px rgba(105,150,199,.3); }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:18px;
+  }
+  @media (max-width: 560px){ .grid{ grid-template-columns:1fr; } }
+
+  .card{
+    position:relative; overflow:hidden;
+    background:rgba(244,238,225,.04);
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:26px 24px;
+    text-decoration:none;
+    color:var(--sand);
+    transition:border-color .22s ease, transform .22s cubic-bezier(.2,.8,.2,1), box-shadow .22s ease, background .22s ease;
+  }
+  .card::before{
+    content:""; position:absolute; top:0; right:0; left:0; height:4px;
+    background:var(--accent, var(--gold));
+    transform:scaleX(0); transform-origin:right;
+    transition:transform .28s cubic-bezier(.2,.8,.2,1);
+  }
+  .card:hover::before{ transform:scaleX(1); }
+  .card:hover{
+    border-color:var(--accent, var(--gold));
+    background:rgba(244,238,225,.06);
+    transform:translateY(-5px);
+    box-shadow:0 18px 36px var(--accent-shadow, rgba(0,0,0,.3));
+  }
+  .card .icon-badge{
+    width:52px; height:52px; border-radius:50%; margin-bottom:18px;
+    background:var(--accent-bg, rgba(244,238,225,.08));
+    border:1px solid var(--accent-border, var(--line));
+    display:flex; align-items:center; justify-content:center;
+    color:var(--accent, var(--gold));
+    transition:transform .25s cubic-bezier(.34,1.56,.64,1);
+  }
+  .card .icon-badge svg{ width:22px; height:22px; }
+  .card:hover .icon-badge{ transform:scale(1.1) rotate(-6deg); }
+  .card .title{ font-weight:700; font-size:16px; margin-bottom:5px; }
+  .card .sub{ font-size:13px; color:var(--muted); line-height:1.5; }
+  .card .arrow{
+    position:absolute; top:24px; left:22px; width:30px; height:30px; border-radius:50%;
+    background:var(--accent-bg, rgba(244,238,225,.08)); display:flex; align-items:center; justify-content:center;
+    opacity:0; transform:translateX(8px); transition:opacity .22s ease, transform .22s ease;
+  }
+  .card .arrow svg{ width:14px; height:14px; color:var(--accent, var(--gold)); }
+  .card:hover .arrow{ opacity:1; transform:translateX(0); }
+
+  .card.featured{ --accent:#C8A24A; --accent-bg:linear-gradient(135deg, rgba(200,162,74,.3), rgba(200,162,74,.08)); --accent-border:rgba(200,162,74,.4); --accent-shadow:rgba(200,162,74,.22);
+    background:linear-gradient(150deg, rgba(200,162,74,.14), rgba(200,162,74,.03));
+  }
+  .card.c-blue{ --accent:#7FA8D9; --accent-bg:linear-gradient(135deg, rgba(105,150,199,.28), rgba(105,150,199,.06)); --accent-border:rgba(105,150,199,.4); --accent-shadow:rgba(105,150,199,.22); }
+
+  /* ===== Side panel (slide-out menu) ===== */
+  .overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; }
+  .overlay.open{ display:block; }
+  .side-panel{
+    position:fixed; top:0; left:0; height:100%; width:270px;
+    background:#132420; box-shadow:8px 0 32px rgba(0,0,0,.35);
+    z-index:1000; transform:translateX(-100%); transition:transform .3s cubic-bezier(.2,.8,.2,1);
+    padding:28px 22px;
+    border-radius:0 22px 22px 0;
+  }
+  .side-panel.open{ transform:translateX(0); }
+  .panel-profile{ display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+  .panel-profile .pname{ font-weight:700; font-size:15px; margin-bottom:4px; }
+  .panel-profile .prole{ font-size:12px; color:var(--muted); }
+  .avatar-panel{
+    width:44px; height:44px; border-radius:50%; background:var(--gold);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .avatar-panel svg{ width:20px; height:20px; }
+
+  .panel-section{ margin-bottom:24px; }
+  .panel-section .section-label{ font-size:12px; color:var(--muted); margin-bottom:12px; }
+
+  .panel-link{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-radius:10px; background:rgba(244,238,225,.05);
+    border:1px solid var(--line);
+    text-decoration:none; color:var(--sand); font-size:14px; font-weight:500;
+    transition:border-color .15s ease;
+  }
+  .panel-link:hover{ border-color:var(--gold); }
+  .panel-link svg{ width:18px; height:18px; color:var(--muted); }
+
+  .stats-row{ display:flex; gap:10px; }
+  .stat-box{
+    flex:1; text-align:center; padding:16px 10px; border-radius:10px;
+    background:rgba(244,238,225,.05); border:1px solid var(--line);
+  }
+  .stat-num{ font-size:20px; font-weight:800; margin-bottom:4px; color:var(--gold); }
+  .stat-label{ font-size:12px; color:var(--muted); }
+
+  .logout-row{ margin-top:8px; margin-bottom:0; }
+  .logout-link{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 14px; border-radius:10px;
+    color:#E8A18E; text-decoration:none; font-size:14px; font-weight:600;
+    transition:background .15s ease;
+  }
+  .logout-link:hover{ background:rgba(196,98,63,.12); }
+  .logout-link svg{ width:18px; height:18px; }
+
+  .developer-section{
+    margin-top:24px;
+    padding-top:20px;
+    border-top:1px solid var(--line);
+  }
+  .contact-label{ font-size:12px; color:var(--muted); margin-bottom:12px; }
+  .credit{ font-size:13px; color:var(--sand); font-weight:500; }
+  .social-links-row{ display:flex; flex-direction:column; gap:8px; align-items:flex-start; margin-top:10px; }
+  .social-link{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 14px;
+    border:1.5px solid var(--line);
+    border-radius:20px;
+    font-size:13px;
+    font-weight:500;
+    color:var(--sand);
+    text-decoration:none;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .social-link:hover{ border-color:var(--gold); background:rgba(244,238,225,.06); }
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .hero{ animation:fadeUp .6s ease .06s both; }
+  .content > .section-heading:nth-of-type(1){ animation:fadeIn .5s ease .18s both; }
+  .content > .section-heading:nth-of-type(2){ animation:fadeIn .5s ease .42s both; }
+  .overview-grid .overview-card{ animation:fadeUp .55s ease both; }
+  .overview-card:nth-child(1){ animation-delay:.22s; }
+  .overview-card:nth-child(2){ animation-delay:.28s; }
+  .overview-card:nth-child(3){ animation-delay:.34s; }
+  .grid .card{ animation:fadeUp .55s ease both; }
+  .grid .card:nth-child(1){ animation-delay:.46s; }
+  .grid .card:nth-child(2){ animation-delay:.52s; }
+  @media (prefers-reduced-motion: reduce){
+    .topbar, .hero, .section-heading, .overview-card, .card{ animation:none !important; }
+    .hero-blob-gold, .hero-blob-teal, .hero-mark{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brand-block">
+      <a class="profile-chip" href="{{ url_for('profile') }}">
+        <div class="avatar">
+          {% if current_avatar_url %}
+            <img src="{{ current_avatar_url }}" alt="{{ user }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+          {% else %}
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="12" cy="8" r="4" fill="#0F1A18"/>
+              <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="#0F1A18" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          {% endif %}
+        </div>
+        <span class="name">{{ user }}</span>
+      </a>
+      <span class="logo">College IT Support</span>
+    </div>
+    <button class="menu-btn" id="menuBtn" aria-label="القائمة"><span></span></button>
+  </div>
+
+  <div class="overlay" id="overlay"></div>
+  <aside class="side-panel" id="sidePanel">
+    <div class="panel-profile">
+      <div>
+        <div class="pname">{{ user }}</div>
+        <div class="prole">فريق الدعم الفني</div>
+      </div>
+      <div class="avatar-panel">
+        {% if current_avatar_url %}
+          <img src="{{ current_avatar_url }}" alt="{{ user }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+        {% else %}
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="12" cy="8" r="4" fill="#0F1A18"/>
+            <path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="#0F1A18" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <p class="section-label">روابط سريعة</p>
+      <a href="{{ url_for('profile') }}" class="panel-link">
+        <span>الملف الشخصي</span>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.6"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </a>
+    </div>
+
+    <div class="panel-section">
+      <p class="section-label">إحصائيات سريعة</p>
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-num">{{ resolved_count }}</div>
+          <div class="stat-label">تم حلها</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-num">{{ ongoing_count }}</div>
+          <div class="stat-label">جارية</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="developer-section">
+      <p class="contact-label">المطوّر</p>
+      <p class="credit">Abdullah Alfaife</p>
+      <div class="social-links-row">
+        <a href="https://www.tiktok.com/@99l445" target="_blank" rel="noopener" class="social-link">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M16.6 5.82c-1.02-.88-1.66-2.17-1.66-3.62h-3.14v13.3c0 1.6-1.3 2.9-2.9 2.9-1.6 0-2.9-1.3-2.9-2.9s1.3-2.9 2.9-2.9c.3 0 .58.05.85.13V9.55a6.1 6.1 0 0 0-.85-.06 6.06 6.06 0 1 0 6.06 6.06V8.6a8.16 8.16 0 0 0 4.77 1.53V7c-1.1 0-2.13-.35-2.97-.95l-.16-.23z"/>
+          </svg>
+          <span>@99l445</span>
+        </a>
+        <a href="https://www.instagram.com/99l445" target="_blank" rel="noopener" class="social-link">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+            <path d="M12 2.16c3.2 0 3.58.01 4.85.07 1.17.05 1.8.25 2.23.41.56.22.96.47 1.38.9.42.42.67.82.9 1.38.16.42.36 1.06.41 2.23.06 1.27.07 1.65.07 4.85s-.01 3.58-.07 4.85c-.05 1.17-.25 1.8-.41 2.23-.22.56-.47.96-.9 1.38-.42.42-.82.67-1.38.9-.42.16-1.06.36-2.23.41-1.27.06-1.65.07-4.85.07s-3.58-.01-4.85-.07c-1.17-.05-1.8-.25-2.23-.41-.56-.22-.96-.47-1.38-.9-.42-.42-.67-.82-.9-1.38-.16-.42-.36-1.06-.41-2.23-.06-1.27-.07-1.65-.07-4.85s.01-3.58.07-4.85c.05-1.17.25-1.8.41-2.23.22-.56.47-.96.9-1.38.42-.42.82-.67 1.38-.9.42-.16 1.06-.36 2.23-.41 1.27-.06 1.65-.07 4.85-.07zm0-2.16c-3.26 0-3.66.01-4.94.07-1.28.06-2.15.26-2.91.56-.79.31-1.46.72-2.13 1.39C1.35 2.72.94 3.39.62 4.18c-.3.76-.5 1.63-.56 2.91C0 8.37 0 8.77 0 12s.01 3.63.07 4.91c.06 1.28.26 2.15.56 2.91.31.79.72 1.46 1.39 2.13.67.67 1.34 1.08 2.13 1.39.76.3 1.63.5 2.91.56 1.28.06 1.68.07 4.94.07s3.66-.01 4.94-.07c1.28-.06 2.15-.26 2.91-.56.79-.31 1.46-.72 2.13-1.39.67-.67 1.08-1.34 1.39-2.13.3-.76.5-1.63.56-2.91.06-1.28.07-1.68.07-4.94s-.01-3.66-.07-4.94c-.06-1.28-.26-2.15-.56-2.91-.31-.79-.72-1.46-1.39-2.13C20.72 1.35 20.05.94 19.26.62c-.76-.3-1.63-.5-2.91-.56C15.07 0 14.67 0 12 0z"/>
+            <path d="M12 5.84A6.16 6.16 0 1 0 18.16 12 6.16 6.16 0 0 0 12 5.84zm0 10.16A4 4 0 1 1 16 12a4 4 0 0 1-4 4z"/>
+            <circle cx="18.41" cy="5.59" r="1.44"/>
+          </svg>
+          <span>@99l445</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="panel-section logout-row">
+      <a href="{{ url_for('logout') }}" class="logout-link">
+        <span>تسجيل الخروج</span>
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M15 3H19C19.5523 3 20 3.44772 20 4V20C20 20.5523 19.5523 21 19 21H15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M10 17L15 12L10 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 12H3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+  </aside>
+
+  <div class="page-layout">
+
+    <main class="content">
+      <section class="hero">
+        <div class="hero-blob-gold"></div>
+        <div class="hero-blob-teal"></div>
+        <div class="hero-text">
+          <span class="eyebrow">فريق الدعم الفني · College IT Support</span>
+          <h1>مرحبًا، {{ user }}</h1>
+          <p>تابع بلاغات الطلاب وحدّث حالتها من مكان واحد. هذي نظرة سريعة على الوضع الحالي.</p>
+        </div>
+        <div class="hero-mark">
+          <img src="{{ url_for('static', filename='tvtc-logo.webp') }}" alt="شعار المؤسسة">
+        </div>
+      </section>
+
+      <p class="section-heading">نظرة عامة</p>
+      <div class="overview-grid">
+        <div class="overview-card resolved">
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>
+            <div class="num">{{ resolved_count }}</div>
+            <div class="label">بلاغات تم حلها هذا الشهر</div>
+          </div>
+        </div>
+        <div class="overview-card pending">
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12L15 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div>
+            <div class="num">{{ open_queue }}</div>
+            <div class="label">بلاغات قيد المتابعة حاليًا</div>
+          </div>
+        </div>
+        <div class="overview-card students">
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 5L21 9L12 13L3 9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 11V16C7 16 9 18 12 18C15 18 17 16 17 16V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 9V14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div>
+            <div class="num">{{ student_count }}</div>
+            <div class="label">إجمالي الطلاب المسجّلين</div>
+          </div>
+        </div>
+      </div>
+
+      <p class="section-heading">روابط سريعة</p>
+      <div class="grid">
+        <a href="{{ url_for('it_tickets') }}" class="card featured">
+          <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H20M4 12H20M4 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+          <div class="title">بلاغات الطلاب</div>
+          <div class="sub">عرض جميع البلاغات الواردة وتحديث حالتها</div>
+        </a>
+        <a href="{{ url_for('profile') }}" class="card c-blue">
+          <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div class="title">الملف الشخصي</div>
+          <div class="sub">تعديل بياناتك الشخصية</div>
+        </a>
+      </div>
+    </main>
+
+    <aside class="side-rail">
+      <div class="side-card">
+        <h2>سير عمل البلاغ</h2>
+        <ul class="steps">
+          <li>
+            <div class="step-num">1</div>
+            <div>
+              <div class="step-title">بلاغ جديد يصل</div>
+              <div class="step-desc">يظهر البلاغ فور إرساله من الطالب مباشرة في صفحة بلاغات الطلاب.</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">2</div>
+            <div>
+              <div class="step-title">حدّث الحالة</div>
+              <div class="step-desc">غيّر الحالة إلى "جاري العمل عليه" فور بدء المعالجة عشان الطالب يتابع.</div>
+            </div>
+          </li>
+          <li>
+            <div class="step-num">3</div>
+            <div>
+              <div class="step-title">أغلق البلاغ</div>
+              <div class="step-desc">بعد حل المشكلة، حدّث الحالة إلى "تم الحل" ليكتمل السجل.</div>
+            </div>
+          </li>
+        </ul>
+        <p class="side-note">أي تحديث للحالة ينعكس فورًا للطالب من صفحة "بلاغاتي" الخاصة فيه.</p>
+
+        <div class="faq">
+          <h2>أسئلة شائعة للفريق</h2>
+          <details class="faq-item">
+            <summary>كيف أحدّث حالة بلاغ؟</summary>
+            <p>افتح بطاقة الطالب في صفحة بلاغات الطلاب، واختر الحالة الجديدة من القائمة المنسدلة — تُحفظ تلقائيًا.</p>
+          </details>
+          <details class="faq-item">
+            <summary>وش الفرق بين الحالات؟</summary>
+            <p>قيد التنفيذ: لم يبدأ العمل عليه بعد. جاري العمل عليه: يُعالَج حاليًا. تم الحل: انتهت المشكلة.</p>
+          </details>
+          <details class="faq-item">
+            <summary>متى يظهر البلاغ "ملغى"؟</summary>
+            <p>فقط لما الطالب نفسه يلغي بلاغه من صفحته — لا يمكن للفريق تغيير هذي الحالة.</p>
+          </details>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    const menuBtn = document.getElementById('menuBtn');
+    const sidePanel = document.getElementById('sidePanel');
+    const overlay = document.getElementById('overlay');
+
+    function toggleMenu(){
+      sidePanel.classList.toggle('open');
+      overlay.classList.toggle('open');
+    }
+
+    menuBtn.addEventListener('click', toggleMenu);
+    overlay.addEventListener('click', toggleMenu);
+  </script>
+</body>
+</html>

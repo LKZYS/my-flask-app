@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | دخول فريق الدعم الفني</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1A18;
+    --gold:#C8A24A;
+    --sand:#F4EEE1;
+    --error:#C4623F;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--ink);
+    color:var(--sand);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:24px;
+  }
+  a{color:inherit;}
+
+  .card{width:100%; max-width:400px;}
+  .card-eyebrow{font-size:14px; color:var(--gold);}
+  .card h1{font-family:'Tajawal', sans-serif; font-weight:700; font-size:28px; margin-top:8px; margin-bottom:10px;}
+  .card p.desc{font-size:14px; color:rgba(244,238,225,.6); margin-bottom:26px; line-height:1.7;}
+
+  .flash{
+    background:rgba(196,98,63,.15);
+    border:1px solid var(--error);
+    color:#E8A18E;
+    font-size:14px;
+    padding:12px 16px;
+    border-radius:8px;
+    margin-bottom:20px;
+  }
+  .flash-success{
+    background:rgba(46,125,91,.15);
+    border-color:#2E7D5B;
+    color:#8FD4B0;
+  }
+
+  .field{margin-bottom:20px;}
+  .field label{display:block; font-size:14px; font-weight:500; margin-bottom:8px; color:rgba(244,238,225,.8);}
+  .field input{
+    width:100%; height:50px; padding:0 16px;
+    font-family:inherit; font-size:15px; color:var(--sand);
+    background:rgba(244,238,225,.06); border:1.5px solid rgba(244,238,225,.18); border-radius:8px;
+    outline:none; transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input::placeholder{color:rgba(244,238,225,.35);}
+  .field input:focus{border-color:var(--gold); box-shadow:0 0 0 3px rgba(200,162,74,.22);}
+
+  .submit{
+    width:100%; height:52px; border:none; border-radius:8px;
+    background:var(--gold); color:var(--ink);
+    font-family:inherit; font-size:16px; font-weight:600;
+    cursor:pointer; margin-top:8px;
+    transition:opacity .15s ease;
+  }
+  .submit:hover{opacity:.9;}
+
+  .links{margin-top:32px; text-align:center; font-size:14px; color:rgba(244,238,225,.5);}
+  .links a{color:var(--gold); font-weight:600; text-decoration:none;}
+  .links a:hover{text-decoration:underline;}
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .card-eyebrow{ animation:fadeUp .6s ease both; }
+  .card h1{ animation:fadeUp .6s ease .06s both; }
+  .card p.desc{ animation:fadeIn .6s ease .12s both; }
+  .flash{ animation:fadeUp .5s ease both; }
+  .field{ animation:fadeUp .55s ease both; }
+  .field:nth-of-type(1){ animation-delay:.2s; }
+  .field:nth-of-type(2){ animation-delay:.26s; }
+  .submit{ animation:fadeUp .55s ease .32s both; }
+  .links{ animation:fadeIn .6s ease .4s both; }
+  @media (prefers-reduced-motion: reduce){
+    .card-eyebrow, .card h1, .card p.desc, .flash, .field, .submit, .links{ animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="card">
+    <p class="card-eyebrow">College IT Support · فريق الدعم الفني</p>
+    <h1>دخول فريق الدعم الفني</h1>
+    <p class="desc">هذي البوابة خاصة بموظفي تقنية المعلومات بالكلية فقط.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('it_login') }}">
+      <div class="field">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" name="email" placeholder="name@college.edu" required>
+      </div>
+      <div class="field">
+        <label for="password">كلمة المرور</label>
+        <input type="password" id="password" name="password" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="submit">تسجيل الدخول</button>
+    </form>
+
+    <p class="links">
+      حساب جديد لفريق الدعم؟ <a href="{{ url_for('it_register') }}">أنشئ حسابًا</a><br>
+      <a href="{{ url_for('login') }}" style="color:rgba(244,238,225,.5); font-weight:400;">رجوع لتسجيل دخول الطلاب</a>
+    </p>
+  </div>
+
+</body>
+</html>

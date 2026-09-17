@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | بلاغاتي</title>
+<script>
+  (function(){
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0F1A18; --gold:#C8A24A; --sand:#F4EEE1; --line:#E1D9C4; --muted:#7A7263;
+         --c-open:#C4623F; --c-working:#D9A72A; --c-resolved:#2E7D5B; --c-cancelled:#8A8A8A; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--sand);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 32px;
+  }
+  .back-link{
+    color:var(--ink); text-decoration:none; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:8px;
+    background:#fff; border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; transition:border-color .15s ease, background .15s ease;
+  }
+  .back-link svg{ width:16px; height:16px; flex-shrink:0; }
+  .back-link:hover{ border-color:var(--gold); background:#FBF8F0; }
+
+  .new-btn{
+    background:var(--ink); color:var(--sand); text-decoration:none;
+    padding:10px 18px; border-radius:8px; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:6px;
+    transition:background .15s ease;
+  }
+  .new-btn:hover{ background:#1B322C; }
+
+  .side-fill{
+    position:fixed; top:0; bottom:0; z-index:-1; pointer-events:none;
+    width:max(0px, calc((100vw - 1300px) / 2));
+    background-image:
+      repeating-linear-gradient(55deg, transparent 0 70px, var(--line) 70px 71px),
+      repeating-linear-gradient(-55deg, transparent 0 70px, var(--line) 70px 71px);
+    opacity:.55;
+    -webkit-mask-image:linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+            mask-image:linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  }
+  .side-fill.left{ left:0; }
+  .side-fill.right{ right:0; }
+  .side-fill::after{
+    content:""; position:absolute; width:320px; height:320px; border-radius:50%;
+    background:radial-gradient(circle, rgba(200,162,74,.16), transparent 70%);
+  }
+  .side-fill.left::after{ top:70px; left:-110px; }
+  .side-fill.right::after{ top:55%; right:-110px; }
+
+  .content{ max-width:1300px; margin:0 auto; padding:12px 24px 70px; position:relative; z-index:1; }
+  .content h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:28px; margin-bottom:6px; }
+  .content .sub{ color:var(--muted); font-size:14px; margin-bottom:26px; }
+
+  .flash{
+    background:#FBEAE3; border:1px solid #C4623F; color:#8A3B22;
+    font-size:14px; padding:12px 16px; border-radius:8px; margin-bottom:20px;
+  }
+  .flash-success{ background:#E6F4EC; border-color:#2E7D5B; color:#1E5A3F; }
+
+  /* ===== Stats strip ===== */
+  .stats{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:26px; }
+  .stat-box{
+    background:#fff; border:1.5px solid var(--line); border-radius:14px;
+    padding:18px 20px;
+  }
+  .stat-box .num{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:26px; line-height:1; margin-bottom:6px; }
+  .stat-box .lbl{ font-size:12.5px; color:var(--muted); }
+  .stat-box.open .num{ color:var(--c-open); }
+  .stat-box.resolved .num{ color:var(--c-resolved); }
+
+  /* ===== Filter tabs ===== */
+  .tabs{
+    position:relative; display:inline-flex; flex-wrap:wrap; gap:2px; margin-bottom:22px;
+    background:#fff; border:1.5px solid var(--line); border-radius:24px; padding:4px;
+  }
+  .tab-highlight{
+    position:absolute; top:4px; bottom:4px; right:4px;
+    background:var(--ink); border-radius:20px;
+    transition:right .32s cubic-bezier(.65,0,.35,1), width .32s cubic-bezier(.65,0,.35,1);
+    z-index:0;
+  }
+  .tab{
+    position:relative; z-index:1;
+    font-family:inherit; font-size:13px; color:var(--muted); background:none;
+    border:none; border-radius:20px; padding:8px 16px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    transition:color .25s ease;
+  }
+  .tab:hover{ color:var(--ink); }
+  .tab.active{ color:var(--sand); }
+  .tab.active:hover{ color:var(--sand); }
+  .tab-count{
+    font-size:10.5px; font-weight:700; min-width:18px; height:18px; padding:0 5px;
+    border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
+    background:rgba(122,114,99,.14); color:var(--muted);
+    transition:background .25s ease, color .25s ease;
+  }
+  .tab.active .tab-count{ background:rgba(244,238,225,.18); color:var(--sand); }
+
+  /* ===== Ticket cards ===== */
+  .list{ display:grid; grid-template-columns:repeat(auto-fit, minmax(430px, 1fr)); gap:16px; align-items:start; }
+  .ticket-card{
+    transition:opacity .28s ease, transform .28s ease;
+  }
+  .ticket-card.hide{
+    opacity:0; transform:translateY(-6px) scale(.98); pointer-events:none;
+  }
+  @media (prefers-reduced-motion: reduce){
+    .tab-highlight, .tab, .tab-count, .ticket-card{ transition:none !important; }
+  }
+  .empty{ padding:56px 8px; text-align:center; color:var(--muted); font-size:14px; background:#fff; border:1.5px solid var(--line); border-radius:14px; }
+  .empty .empty-icon{ font-size:34px; margin-bottom:14px; }
+  .empty .empty-cta{ display:inline-block; margin-top:16px; color:var(--ink); font-weight:600; text-decoration:none; border-bottom:1.5px solid var(--gold); padding-bottom:2px; }
+  .no-match{ display:none; padding:30px 8px; text-align:center; color:var(--muted); font-size:13.5px; }
+
+  .ticket-card{
+    background:#fff; border:1.5px solid var(--line); border-inline-start:4px solid var(--status-color, var(--line));
+    border-radius:12px; padding:18px 20px;
+    display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .t-main{ flex:1; min-width:220px; }
+  .t-head{ display:flex; align-items:baseline; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+  .t-title{ font-weight:600; font-size:15px; }
+  .t-id{ font-size:12px; color:var(--muted); font-weight:400; }
+  .t-desc{ font-size:13px; color:var(--muted); margin-bottom:10px; max-width:440px; line-height:1.6; }
+  .t-meta{ display:flex; align-items:center; gap:10px; font-size:12px; color:var(--muted); }
+  .t-edited{ background:var(--sand); border:1px solid var(--line); border-radius:12px; padding:2px 9px; font-size:11px; }
+
+  .t-side{ display:flex; flex-direction:column; align-items:flex-end; gap:10px; flex-shrink:0; }
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:20px;
+    font-size:12px; font-weight:600; color:#fff; white-space:nowrap;
+  }
+  .badge.open{ background:var(--c-open); }
+  .badge.cancelled{ background:var(--c-cancelled); }
+  .badge.working{ background:var(--c-working); color:#2A2205; }
+  .badge.resolved{ background:var(--c-resolved); }
+
+  .btn-row{ display:flex; gap:8px; }
+  .cancel-btn, .edit-btn{
+    background:none; border:1.5px solid var(--line); color:var(--muted);
+    font-family:inherit; font-size:12px; padding:6px 14px; border-radius:20px;
+    cursor:pointer; text-decoration:none; display:inline-block;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .cancel-btn:hover{ border-color:#C4623F; color:#C4623F; }
+  .edit-btn:hover{ border-color:var(--gold); color:#8A6A22; }
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .content h1{ animation:fadeUp .55s ease .08s both; }
+  .content .sub{ animation:fadeIn .5s ease .16s both; }
+  .stats{ animation:fadeUp .5s ease .2s both; }
+  .tabs{ animation:fadeIn .5s ease .26s both; }
+  .list{ animation:fadeUp .55s ease .3s both; }
+  .side-panel{ animation:fadeUp .55s ease .26s both; }
+  @media (prefers-reduced-motion: reduce){
+    .topbar, .content h1, .content .sub, .stats, .tabs, .list, .side-panel{ animation:none !important; }
+  }
+
+  @media (max-width:600px){
+    .stats{ grid-template-columns:1fr 1fr; }
+    .stats .stat-box:nth-child(3){ grid-column:span 2; }
+    .list{ grid-template-columns:1fr; }
+  }
+
+  /* ===== Page layout with sidebar ===== */
+  .page-layout{ display:grid; grid-template-columns:1fr 300px; gap:24px; align-items:start; }
+
+  .side-panel{
+    background:var(--ink); color:var(--sand); border-radius:16px; padding:26px 24px;
+    position:sticky; top:20px; overflow:hidden;
+  }
+  .side-panel::before{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(circle at 85% 0%, rgba(200,162,74,.14), transparent 55%);
+    pointer-events:none;
+  }
+  .side-panel h2{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:15px; color:var(--gold); margin-bottom:18px; position:relative; }
+
+  .donut-wrap{ position:relative; width:140px; height:140px; margin:0 auto 22px; }
+  .donut{ width:100%; height:100%; border-radius:50%; }
+  .donut-hole{
+    position:absolute; inset:20px; background:var(--ink); border-radius:50%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+  }
+  .donut-hole .num{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:22px; line-height:1; }
+  .donut-hole .lbl{ font-size:9.5px; color:rgba(244,238,225,.5); margin-top:3px; }
+  .donut-empty{ text-align:center; font-size:12px; color:rgba(244,238,225,.5); padding:34px 0; position:relative; }
+
+  .legend{ display:flex; flex-direction:column; gap:9px; margin-bottom:24px; position:relative; }
+  .legend-item{ display:flex; align-items:center; justify-content:space-between; font-size:12px; color:rgba(244,238,225,.75); }
+  .legend-item .lg-name{ display:flex; align-items:center; gap:7px; }
+  .legend-dot{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .legend-item .lg-count{ font-weight:700; color:var(--sand); }
+
+  .tips{ padding-top:20px; border-top:1px solid rgba(244,238,225,.12); position:relative; }
+  .tips ul{ list-style:none; display:flex; flex-direction:column; gap:12px; }
+  .tips li{ font-size:12px; line-height:1.7; color:rgba(244,238,225,.6); display:flex; gap:8px; }
+  .tips li::before{ content:"◆"; color:var(--gold); font-size:7px; margin-top:6px; flex-shrink:0; }
+
+  @media (max-width:960px){
+    .page-layout{ grid-template-columns:1fr; }
+    .side-panel{ position:static; }
+  }
+
+  /* ===== Dark mode ===== */
+  html[data-theme="dark"] body{ background:#0B1412; color:#EDE7D8; }
+  html[data-theme="dark"] .back-link{ background:#16221D; border-color:#2A3A32; color:#EDE7D8; }
+  html[data-theme="dark"] .back-link:hover{ background:#1B2A24; border-color:var(--gold); }
+  html[data-theme="dark"] .side-fill{
+    opacity:.6;
+    background-image:
+      repeating-linear-gradient(55deg, transparent 0 70px, rgba(200,162,74,.12) 70px 71px),
+      repeating-linear-gradient(-55deg, transparent 0 70px, rgba(200,162,74,.12) 70px 71px);
+  }
+  html[data-theme="dark"] .side-fill::after{ background:radial-gradient(circle, rgba(200,162,74,.22), transparent 70%); }
+  html[data-theme="dark"] .content .sub{ color:#9CA79E; }
+  html[data-theme="dark"] .stat-box,
+  html[data-theme="dark"] .tabs,
+  html[data-theme="dark"] .empty{ background:#16221D; border-color:#2A3A32; }
+  html[data-theme="dark"] .stat-box .lbl{ color:#9CA79E; }
+  html[data-theme="dark"] .tab{ color:#9CA79E; }
+  html[data-theme="dark"] .tab:hover{ color:#EDE7D8; }
+  html[data-theme="dark"] .ticket-card{ background:#16221D; border-color:#2A3A32; }
+  html[data-theme="dark"] .t-id,
+  html[data-theme="dark"] .t-desc,
+  html[data-theme="dark"] .t-meta,
+  html[data-theme="dark"] .empty{ color:#9CA79E; }
+  html[data-theme="dark"] .t-edited{ background:#101B18; border-color:#2A3A32; }
+  html[data-theme="dark"] .cancel-btn,
+  html[data-theme="dark"] .edit-btn{ border-color:#2A3A32; color:#9CA79E; }
+</style>
+</head>
+<body>
+
+  <div class="side-fill left" aria-hidden="true"></div>
+  <div class="side-fill right" aria-hidden="true"></div>
+
+  <div class="topbar">
+    <a class="back-link" href="{{ url_for('dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
+    <a class="new-btn" href="{{ url_for('new_ticket') }}">+ بلاغ جديد</a>
+  </div>
+
+  <main class="content">
+    <h1>بلاغاتي</h1>
+    <p class="sub">جميع البلاغات اللي رفعتها وحالتها الحالية</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% set ns = namespace(open=0, resolved=0, cancelled=0) %}
+    {% for t in tickets %}
+      {% if t[4] == 'تم حل الطلب' %}{% set ns.resolved = ns.resolved + 1 %}
+      {% elif t[4] == 'ملغى' %}{% set ns.cancelled = ns.cancelled + 1 %}
+      {% else %}{% set ns.open = ns.open + 1 %}
+      {% endif %}
+    {% endfor %}
+    {% set total = tickets|length %}
+    {% set p1 = (ns.resolved / total * 100) if total > 0 else 0 %}
+    {% set p2 = p1 + ((ns.open / total * 100) if total > 0 else 0) %}
+
+    <div class="page-layout">
+      <div class="main-col">
+        {% if tickets %}
+          <div class="stats">
+            <div class="stat-box">
+              <div class="num">{{ total }}</div>
+              <div class="lbl">إجمالي البلاغات</div>
+            </div>
+            <div class="stat-box open">
+              <div class="num">{{ ns.open }}</div>
+              <div class="lbl">قيد المعالجة</div>
+            </div>
+            <div class="stat-box resolved">
+              <div class="num">{{ ns.resolved }}</div>
+              <div class="lbl">تم الحل</div>
+            </div>
+          </div>
+
+          <div class="tabs" id="tabsWrap">
+            <span class="tab-highlight" id="tabHighlight"></span>
+            <button class="tab active" data-filter="all">الكل <span class="tab-count">{{ total }}</span></button>
+            <button class="tab" data-filter="open">قيد المعالجة <span class="tab-count">{{ ns.open }}</span></button>
+            <button class="tab" data-filter="resolved">تم الحل <span class="tab-count">{{ ns.resolved }}</span></button>
+            <button class="tab" data-filter="cancelled">ملغى <span class="tab-count">{{ ns.cancelled }}</span></button>
+          </div>
+
+          <div class="list" id="ticketList">
+            {% for t in tickets %}
+              {% set st = 'cancelled' if t[4] == 'ملغى' else ('resolved' if t[4] == 'تم حل الطلب' else ('working' if t[4] == 'جاري العمل عليه' else 'open')) %}
+              <div class="ticket-card"
+                   data-status="{{ 'cancelled' if st == 'cancelled' else ('resolved' if st == 'resolved' else 'open') }}"
+                   style="--status-color: var(--c-{{ st }});">
+                <div class="t-main">
+                  <div class="t-head">
+                    <span class="t-title">{{ t[2] }}</span>
+                    <span class="t-id">#{{ t[0] }}</span>
+                  </div>
+                  <p class="t-desc">{{ t[3] }}</p>
+                  <div class="t-meta">
+                    <span>{{ t[5] }}</span>
+                    {% if t[6] == '1' %}<span class="t-edited">معدّل</span>{% endif %}
+                  </div>
+                </div>
+                <div class="t-side">
+                  <span class="badge {{ st }}">
+                    {% if st == 'cancelled' %}✖{% elif st == 'resolved' %}✓{% elif st == 'working' %}⚙{% else %}⏳{% endif %}
+                    {{ t[4] }}
+                  </span>
+                  {% if t[4] != 'ملغى' and t[4] != 'تم حل الطلب' %}
+                    <div class="btn-row">
+                      {% if t[6] != '1' %}
+                        <a href="{{ url_for('edit_ticket', ticket_id=t[0]) }}" class="edit-btn">تعديل</a>
+                      {% endif %}
+                      <form method="POST" action="{{ url_for('cancel_ticket_route', ticket_id=t[0]) }}" onsubmit="return confirm('هل أنت متأكد من إلغاء هذا البلاغ؟');">
+                        <button type="submit" class="cancel-btn">إلغاء البلاغ</button>
+                      </form>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <p class="no-match" id="noMatch">لا توجد بلاغات مطابقة لهذا التصنيف.</p>
+
+        {% else %}
+          <div class="empty">
+            <div class="empty-icon">🗂️</div>
+            لا توجد بلاغات بعد.
+            <br>
+            <a href="{{ url_for('new_ticket') }}" class="empty-cta">أنشئ أول بلاغ لك ←</a>
+          </div>
+        {% endif %}
+      </div>
+
+      <aside class="side-panel">
+        <h2>توزيع البلاغات</h2>
+        {% if total > 0 %}
+          <div class="donut-wrap">
+            <div class="donut" style="background: conic-gradient(var(--c-resolved) 0% {{ p1 }}%, var(--c-open) {{ p1 }}% {{ p2 }}%, var(--c-cancelled) {{ p2 }}% 100%);"></div>
+            <div class="donut-hole">
+              <span class="num">{{ total }}</span>
+              <span class="lbl">إجمالي</span>
+            </div>
+          </div>
+          <div class="legend">
+            <div class="legend-item">
+              <span class="lg-name"><span class="legend-dot" style="background:var(--c-resolved)"></span>تم الحل</span>
+              <span class="lg-count">{{ ns.resolved }}</span>
+            </div>
+            <div class="legend-item">
+              <span class="lg-name"><span class="legend-dot" style="background:var(--c-open)"></span>قيد المعالجة</span>
+              <span class="lg-count">{{ ns.open }}</span>
+            </div>
+            <div class="legend-item">
+              <span class="lg-name"><span class="legend-dot" style="background:var(--c-cancelled)"></span>ملغى</span>
+              <span class="lg-count">{{ ns.cancelled }}</span>
+            </div>
+          </div>
+        {% else %}
+          <div class="donut-empty">ما فيه بيانات بعد</div>
+        {% endif %}
+
+        <div class="tips">
+          <h2>نصائح سريعة</h2>
+          <ul>
+            <li>اكتب عنوان واضح ومختصر يوصف المشكلة بدقة</li>
+            <li>افتح بلاغ منفصل لكل مشكلة عشان يسهل حلها بسرعة</li>
+            <li>لو رجعت نفس المشكلة بعد الحل، ارفع بلاغ جديد بدل التعديل</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    var tabsWrap = document.getElementById('tabsWrap');
+    var highlight = document.getElementById('tabHighlight');
+    var tabs = document.querySelectorAll('.tab');
+    var cards = document.querySelectorAll('.ticket-card');
+    var noMatch = document.getElementById('noMatch');
+
+    function moveHighlight(tab, skipTransition){
+      if (!tabsWrap || !highlight || !tab) return;
+      if (skipTransition) highlight.style.transition = 'none';
+      var wrapRect = tabsWrap.getBoundingClientRect();
+      var tabRect = tab.getBoundingClientRect();
+      // RTL-safe: measure distance from the wrapper's right edge
+      var right = wrapRect.right - tabRect.right;
+      highlight.style.right = right + 'px';
+      highlight.style.width = tabRect.width + 'px';
+      if (skipTransition){
+        highlight.getBoundingClientRect(); // force reflow
+        highlight.style.transition = '';
+      }
+    }
+
+    function applyFilter(filter){
+      var visibleCount = 0;
+      cards.forEach(function(card){
+        var show = filter === 'all' || card.dataset.status === filter;
+        if (show){
+          visibleCount++;
+          if (card.style.display === 'none'){
+            card.style.display = '';
+            card.classList.add('hide');
+            requestAnimationFrame(function(){
+              requestAnimationFrame(function(){ card.classList.remove('hide'); });
+            });
+          }
+        } else {
+          card.classList.add('hide');
+          setTimeout(function(){
+            if (card.classList.contains('hide')) card.style.display = 'none';
+          }, 280);
+        }
+      });
+      if (noMatch) noMatch.style.display = visibleCount === 0 ? 'block' : 'none';
+    }
+
+    tabs.forEach(function(tab){
+      tab.addEventListener('click', function(){
+        tabs.forEach(function(t){ t.classList.remove('active'); });
+        tab.classList.add('active');
+        moveHighlight(tab);
+        applyFilter(tab.dataset.filter);
+      });
+    });
+
+    window.addEventListener('resize', function(){
+      var active = document.querySelector('.tab.active');
+      if (active) moveHighlight(active);
+    });
+
+    var initialActive = document.querySelector('.tab.active');
+    if (initialActive) moveHighlight(initialActive, true);
+    if (tabsWrap){
+      tabsWrap.addEventListener('animationend', function(){
+        var active = document.querySelector('.tab.active');
+        if (active) moveHighlight(active, true);
+      });
+    }
+  </script>
+
+</body>
+</html>
