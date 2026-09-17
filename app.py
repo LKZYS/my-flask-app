@@ -9,6 +9,8 @@ app.secret_key = "change-this-secret-key"  # مهم تغيّرها لاحقًا
 
 IT_STAFF_CODE = "IT-2026"  # الرمز السري لإنشاء حساب فريق الدعم الفني — غيّره لرمز خاص فيك
 
+STATS_RESET_AFTER = timedelta(days=30)  # نافذة إنجاز الموظف الفني (بلاغات حلّها) — متحركة يوم بيوم، مو رتست ثابت أول الشهر
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USERS_FILE = os.path.join(BASE_DIR, "users.csv")
 TICKETS_FILE = os.path.join(BASE_DIR, "tickets.csv")
@@ -45,6 +47,48 @@ def delete_avatar(email):
             pass
 
 
+def fix_duplicate_ticket_ids():
+    """يصلح أي أرقام بلاغات مكرّرة في الملف (من أثر طريقة الترقيم القديمة).
+    البلاغ الأقدم يحتفظ برقمه، والمكرّر بعده ياخذ رقمًا جديدًا فوق أكبر رقم موجود."""
+    if not os.path.exists(TICKETS_FILE):
+        return 0
+
+    with open(TICKETS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+
+    if len(rows) < 2:
+        return 0
+
+    seen = set()
+    max_id = 1000
+    for row in rows[1:]:
+        if not row:
+            continue
+        try:
+            max_id = max(max_id, int(row[0]))
+        except (ValueError, IndexError):
+            continue
+
+    fixed = 0
+    for row in rows[1:]:  # تخطي صف العناوين
+        if not row:
+            continue
+        ticket_id = row[0]
+        if ticket_id in seen:
+            max_id += 1
+            row[0] = str(max_id)
+            fixed += 1
+        seen.add(row[0])
+
+    if fixed:
+        with open(TICKETS_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerows(rows)
+
+    return fixed
+
+
 def init_file():
     os.makedirs(AVATAR_DIR, exist_ok=True)
 
@@ -56,7 +100,12 @@ def init_file():
     if not os.path.exists(TICKETS_FILE):
         with open(TICKETS_FILE, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["id", "email", "title", "description", "status", "created_at", "edited", "resolved_at"])  # صف العناوين
+            writer.writerow(["id", "email", "title", "description", "status", "created_at", "edited", "resolved_at", "handled_by"])  # صف العناوين
+
+    fix_duplicate_ticket_ids()  # ينظّف أي تكرار قديم بالأرقام عند تشغيل التطبيق
+
+
+init_file()  # يشتغل عند استيراد الملف، عشان يضمن التهيئة حتى لو شغّلت التطبيق عبر gunicorn
 
 
 def email_exists(email):
@@ -154,9 +203,21 @@ def inject_avatar():
     return {"current_avatar_url": avatar_url}
 
 
+def require_student():
+    """يتأكد إن الجلسة الحالية تخص حساب طالب فعليًا، مو حساب فريق الدعم الفني.
+    يرجّع استجابة تحويل لو الوصول غير مسموح، أو None لو الوصول سليم ويقدر الراوت يكمل عمله."""
+    if "user" not in session:
+        return redirect(url_for("login"))
+    if session.get("role") != "student":
+        return redirect(url_for("it_dashboard"))
+    return None
+
+
 @app.route("/")
 def home():
     if "user" in session:
+        if session.get("role") == "it":
+            return redirect(url_for("it_dashboard"))
         return redirect(url_for("dashboard"))
     return redirect(url_for("login"))
 
@@ -317,9 +378,11 @@ def it_register():
     return render_template("it_register.html")
 
 
-def get_ticket_stats():
-    """يرجع (عدد البلاغات المحلولة هالشهر، عدد البلاغات الجارية اللي فُتحت هالشهر، إجمالي البلاغات المفتوحة حاليًا بغض النظر عن الشهر).
-    الإحصائيات الشهرية ترتست تلقائيًا أول كل شهر ميلادي جديد."""
+def get_ticket_stats(handler_email):
+    """يرجع (عدد البلاغات اللي حلّها هذا الموظف تحديدًا خلال آخر 30 يوم، عدد البلاغات اللي يشتغل عليها حاليًا).
+    كل موظف فني يشوف إنجازه الشخصي فقط — بلاغ حلّه موظف ثاني ما يُحتسب له.
+    عدّاد المحلولة يعتمد على نافذة متحركة من 30 يوم (مو الشهر الميلادي)، فيرتست تدريجيًا يوم بيوم
+    بدل ما يترست فجأة أول كل شهر — والبلاغ يبقى محسوب بالإحصائيات حتى لو اختفى من قائمة البلاغات بعد 24 ساعة."""
     now = datetime.now()
     with open(TICKETS_FILE, "r", encoding="utf-8") as f:
         reader = csv.reader(f)
@@ -328,28 +391,137 @@ def get_ticket_stats():
 
     resolved = 0
     ongoing = 0
-    open_queue = 0
     for row in rows:
-        while len(row) < 8:
+        while len(row) < 9:
             row.append("")
         status = row[4]
+        handled_by = row[8]
+        if handled_by != handler_email:
+            continue
         if status == "تم حل الطلب" and row[7]:
             try:
                 resolved_time = datetime.strptime(row[7], "%Y-%m-%d %H:%M")
             except ValueError:
                 continue
-            if resolved_time.year == now.year and resolved_time.month == now.month:
+            if now - resolved_time <= STATS_RESET_AFTER:
                 resolved += 1
-        elif status in ("قيد التنفيذ", "جاري العمل عليه"):
-            open_queue += 1
-            try:
-                created_time = datetime.strptime(row[5], "%Y-%m-%d %H:%M")
-            except ValueError:
-                continue
-            if created_time.year == now.year and created_time.month == now.month:
-                ongoing += 1
+        elif status == "جاري العمل عليه":
+            ongoing += 1
 
-    return resolved, ongoing, open_queue
+    return resolved, ongoing
+
+
+def get_open_queue_count():
+    """يرجع إجمالي عدد البلاغات المفتوحة حاليًا (قيد التنفيذ أو جاري العمل عليها) لكل الفريق، بغض النظر عمّن يتابعها."""
+    with open(TICKETS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        rows = [row for row in reader if row]
+
+    return sum(1 for row in rows if len(row) > 4 and row[4] in ("قيد التنفيذ", "جاري العمل عليه"))
+
+
+def get_archive_count():
+    """يرجع إجمالي عدد البلاغات المغلقة (محلولة أو ملغاة) من كل الأوقات، لعرضه بجانب رابط الأرشيف."""
+    with open(TICKETS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        rows = [row for row in reader if row]
+
+    return sum(1 for row in rows if len(row) > 4 and row[4] in ("تم حل الطلب", "ملغى"))
+
+
+def format_duration_ar(total_seconds):
+    """يحوّل عدد ثواني لنص مدة مقروء بالعربي (يوم/ساعة/دقيقة)."""
+    total_minutes = int(total_seconds // 60)
+    days, rem_minutes = divmod(total_minutes, 24 * 60)
+    hours, minutes = divmod(rem_minutes, 60)
+    if days > 0:
+        return f"{days} يوم {hours} ساعة" if hours else f"{days} يوم"
+    if hours > 0:
+        return f"{hours} ساعة {minutes} دقيقة" if minutes else f"{hours} ساعة"
+    return f"{minutes} دقيقة"
+
+
+def get_avg_resolution_time():
+    """يرجع متوسط الوقت من فتح البلاغ لحين حله (نص جاهز للعرض)، محسوب على كل البلاغات
+    المحلولة من كل الأوقات. يرجع None لو ما فيه بلاغات محلولة بعد."""
+    with open(TICKETS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        rows = [row for row in reader if row]
+
+    diffs = []
+    for row in rows:
+        while len(row) < 9:
+            row.append("")
+        if row[4] != "تم حل الطلب" or not row[7] or not row[5]:
+            continue
+        try:
+            created = datetime.strptime(row[5], "%Y-%m-%d %H:%M")
+            resolved = datetime.strptime(row[7], "%Y-%m-%d %H:%M")
+        except ValueError:
+            continue
+        seconds = (resolved - created).total_seconds()
+        if seconds >= 0:
+            diffs.append(seconds)
+
+    if not diffs:
+        return None
+    return format_duration_ar(sum(diffs) / len(diffs))
+
+
+def get_today_ticket_count():
+    """يرجع عدد البلاغات اللي وصلت اليوم (بغض النظر عن حالتها)، لكل الفريق."""
+    today_str = date.today().isoformat()
+    with open(TICKETS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        rows = [row for row in reader if row]
+
+    return sum(1 for row in rows if len(row) > 5 and row[5].startswith(today_str))
+
+
+def get_top_staff_this_month():
+    """يرجع (اسم الموظف، عدد البلاغات) لأكثر موظف فني حلّ بلاغات خلال آخر 30 يوم (STATS_RESET_AFTER)،
+    أو None لو ما فيه أي بلاغ محلول ضمن هذي النافذة."""
+    now = datetime.now()
+    with open(TICKETS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        rows = [row for row in reader if row]
+
+    counts = {}
+    for row in rows:
+        while len(row) < 9:
+            row.append("")
+        if row[4] != "تم حل الطلب" or not row[8] or not row[7]:
+            continue
+        try:
+            resolved_time = datetime.strptime(row[7], "%Y-%m-%d %H:%M")
+        except ValueError:
+            continue
+        if now - resolved_time <= STATS_RESET_AFTER:
+            counts[row[8]] = counts.get(row[8], 0) + 1
+
+    if not counts:
+        return None
+
+    top_email = max(counts, key=lambda e: counts[e])
+    names = get_it_staff_names()
+    return names.get(top_email, top_email), counts[top_email]
+
+
+def get_it_staff_names():
+    """يرجع قاموس (إيميل -> الاسم الكامل) لكل موظفي فريق الدعم الفني، لعرض اسم من يتابع/حلّ كل بلاغ."""
+    names = {}
+    with open(USERS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            if len(row) >= 5 and row[4] == "it":
+                names[row[2]] = row[0]
+    return names
 
 
 def get_student_count():
@@ -368,8 +540,13 @@ def get_student_count():
 def it_dashboard():
     if session.get("role") != "it":
         return redirect(url_for("it_login"))
-    resolved_count, ongoing_count, open_queue = get_ticket_stats()
+    resolved_count, ongoing_count = get_ticket_stats(session.get("email", ""))
+    open_queue = get_open_queue_count()
     student_count = get_student_count()
+    archive_count = get_archive_count()
+    avg_resolution_time = get_avg_resolution_time()
+    today_ticket_count = get_today_ticket_count()
+    top_staff = get_top_staff_this_month()
     return render_template(
         "it_dashboard.html",
         user=session["user"],
@@ -377,6 +554,11 @@ def it_dashboard():
         ongoing_count=ongoing_count,
         open_queue=open_queue,
         student_count=student_count,
+        archive_count=archive_count,
+        avg_resolution_time=avg_resolution_time,
+        today_ticket_count=today_ticket_count,
+        top_staff_name=top_staff[0] if top_staff else None,
+        top_staff_count=top_staff[1] if top_staff else 0,
     )
 
 
@@ -385,7 +567,15 @@ def it_tickets():
     if session.get("role") != "it":
         return redirect(url_for("it_login"))
     students = get_all_tickets()
-    return render_template("it_tickets.html", user=session["user"], students=students, statuses=TICKET_STATUSES)
+    staff_names = get_it_staff_names()
+    return render_template(
+        "it_tickets.html",
+        user=session["user"],
+        students=students,
+        statuses=TICKET_STATUSES,
+        staff_names=staff_names,
+        current_staff_email=session.get("email", ""),
+    )
 
 
 @app.route("/tickets/<int:ticket_id>/status", methods=["POST"])
@@ -394,8 +584,32 @@ def update_ticket_status_route(ticket_id):
         return redirect(url_for("it_login"))
 
     status = request.form.get("status", "")
-    update_ticket_status(ticket_id, status)
+    result = update_ticket_status(ticket_id, status, session.get("email", ""))
+
+    if result == "locked":
+        flash("هذا البلاغ تم حلّه ولا يمكن تغيير حالته بعد ذلك")
+    elif result == "cancelled":
+        flash("لا يمكن تغيير حالة بلاغ ملغى")
+    elif result == "ok":
+        flash("تم تحديث حالة البلاغ", "success")
+
     return redirect(url_for("it_tickets"))
+
+
+@app.route("/it-archive")
+def it_archive():
+    """أرشيف كامل للبلاغات المغلقة (محلولة أو ملغاة) من كل الأوقات، بدون نافذة الـ24 ساعة.
+    البلاغات هنا للعرض فقط، ما فيه تعديل على حالتها."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+    students = get_archived_tickets()
+    staff_names = get_it_staff_names()
+    return render_template(
+        "it_archive.html",
+        user=session["user"],
+        students=students,
+        staff_names=staff_names,
+    )
 
 
 def get_user_by_email(email):
@@ -417,17 +631,31 @@ def get_user_by_email(email):
     return None
 
 
-def save_ticket(email, title, description):
+def get_next_ticket_id():
+    """يرجع رقم البلاغ التالي = أكبر رقم موجود + 1، ويبدأ من #1001.
+    الاعتماد على أكبر رقم بدل عدد الصفوف يمنع تكرار الأرقام لو انحذف صف أو تغيّر ترتيب الملف."""
+    max_id = 1000
     with open(TICKETS_FILE, "r", encoding="utf-8") as f:
         reader = csv.reader(f)
-        rows = list(reader)
-    next_id = 1000 + len(rows)  # يبدأ الترقيم من #1001 ليبدو كرقم بلاغ حقيقي
+        next(reader, None)  # تخطي صف العناوين
+        for row in reader:
+            if not row:
+                continue
+            try:
+                max_id = max(max_id, int(row[0]))
+            except (ValueError, IndexError):
+                continue  # صف تالف أو رقم غير صحيح — نتجاهله
+    return max_id + 1
+
+
+def save_ticket(email, title, description):
+    next_id = get_next_ticket_id()
 
     with open(TICKETS_FILE, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow([
             next_id, email, title, description, "قيد التنفيذ",
-            datetime.now().strftime("%Y-%m-%d %H:%M"), "0", ""
+            datetime.now().strftime("%Y-%m-%d %H:%M"), "0", "", ""
         ])
 
 
@@ -441,27 +669,15 @@ def get_tickets_by_email(email):
             row.append("0")  # صف قديم بدون عمود edited
         while len(row) < 8:
             row.append("")  # صف قديم بدون عمود resolved_at
+        while len(row) < 9:
+            row.append("")  # صف قديم بدون عمود handled_by
     tickets = [row for row in tickets if is_ticket_visible(row)]
     tickets.reverse()  # الأحدث أولًا
     return tickets
 
 
-def get_all_tickets():
-    """يجيب كل البلاغات من جميع الطلاب مجمّعة حسب كل طالب (اسمه، رقمه التدريبي، وبلاغاته)."""
-    with open(TICKETS_FILE, "r", encoding="utf-8") as f:
-        reader = csv.reader(f)
-        next(reader, None)
-        rows = [row for row in reader if row]
-
-    for row in rows:
-        while len(row) < 7:
-            row.append("0")  # صف قديم بدون عمود edited
-        while len(row) < 8:
-            row.append("")  # صف قديم بدون عمود resolved_at
-
-    rows = [row for row in rows if is_ticket_visible(row)]
-    rows.reverse()  # الأحدث أولًا
-
+def _group_tickets_by_student(rows):
+    """يجمّع صفوف بلاغات (بعد إكمال أعمدتها) حسب كل طالب، بنفس ترتيبها المُمرَّر."""
     students = {}
     order = []
     for row in rows:
@@ -480,6 +696,49 @@ def get_all_tickets():
     return [students[email] for email in order]
 
 
+def get_all_tickets():
+    """يجيب كل البلاغات الظاهرة حاليًا من جميع الطلاب مجمّعة حسب كل طالب (اسمه، رقمه التدريبي، وبلاغاته)."""
+    with open(TICKETS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        rows = [row for row in reader if row]
+
+    for row in rows:
+        while len(row) < 7:
+            row.append("0")  # صف قديم بدون عمود edited
+        while len(row) < 8:
+            row.append("")  # صف قديم بدون عمود resolved_at
+        while len(row) < 9:
+            row.append("")  # صف قديم بدون عمود handled_by
+
+    rows = [row for row in rows if is_ticket_visible(row)]
+    rows.reverse()  # الأحدث أولًا
+
+    return _group_tickets_by_student(rows)
+
+
+def get_archived_tickets():
+    """يجيب كل البلاغات المغلقة (محلولة أو ملغاة) من كل الأوقات، بغض النظر عن نافذة الـ24 ساعة —
+    هذي أرشيف كامل لسجل البلاغات، يستخدمها فريق الدعم الفني للرجوع لأي بلاغ قديم."""
+    with open(TICKETS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        rows = [row for row in reader if row]
+
+    for row in rows:
+        while len(row) < 7:
+            row.append("0")
+        while len(row) < 8:
+            row.append("")
+        while len(row) < 9:
+            row.append("")
+
+    rows = [row for row in rows if row[4] in CLOSED_STATUSES]
+    rows.reverse()  # الأحدث أولًا
+
+    return _group_tickets_by_student(rows)
+
+
 def cancel_ticket(ticket_id, email):
     """يغيّر حالة بلاغ معيّن إلى (ملغى)، فقط إذا كان يخص نفس المستخدم."""
     with open(TICKETS_FILE, "r", encoding="utf-8") as f:
@@ -489,7 +748,10 @@ def cancel_ticket(ticket_id, email):
     updated = False
     for row in rows[1:]:  # تخطي صف العناوين
         if row and row[0] == str(ticket_id) and row[1] == email:
+            while len(row) < 9:
+                row.append("")  # صف قديم بدون عمود resolved_at / handled_by
             row[4] = "ملغى"
+            row[7] = datetime.now().strftime("%Y-%m-%d %H:%M")  # وقت الإلغاء، يُستخدم لإخفائه بعد 24 ساعة
             updated = True
 
     if updated:
@@ -501,51 +763,73 @@ def cancel_ticket(ticket_id, email):
 
 
 TICKET_STATUSES = ["قيد التنفيذ", "جاري العمل عليه", "تم حل الطلب"]
-RESOLVED_HIDE_AFTER = timedelta(days=30)  # مدة بقاء البلاغ المحلول ظاهرًا قبل ما يختفي من القوائم (البيانات تبقى محفوظة بالملف)
+CLOSED_STATUSES = ("تم حل الطلب", "ملغى")
+CLOSED_HIDE_AFTER = timedelta(hours=24)  # مدة بقاء البلاغ المحلول أو الملغى ظاهرًا قبل ما يختفي من القوائم (البيانات تبقى محفوظة بالملف)
 
 
 def is_ticket_visible(row):
-    """يرجع False إذا كان البلاغ (تم حل الطلب) ومرّ على حله أكثر من RESOLVED_HIDE_AFTER.
+    """يرجع False إذا كان البلاغ (محلول أو ملغى) ومرّ على إغلاقه أكثر من CLOSED_HIDE_AFTER.
     البلاغ يبقى محفوظًا بالملف دائمًا، بس نخفيه من العرض فقط."""
-    if row[4] != "تم حل الطلب":
+    if row[4] not in CLOSED_STATUSES:
         return True
-    resolved_at = row[7] if len(row) > 7 else ""
-    if not resolved_at:
+    closed_at = row[7] if len(row) > 7 else ""
+    if not closed_at:
         return True
     try:
-        resolved_time = datetime.strptime(resolved_at, "%Y-%m-%d %H:%M")
+        closed_time = datetime.strptime(closed_at, "%Y-%m-%d %H:%M")
     except ValueError:
         return True
-    return datetime.now() - resolved_time <= RESOLVED_HIDE_AFTER
+    return datetime.now() - closed_time <= CLOSED_HIDE_AFTER
 
 
-def update_ticket_status(ticket_id, status):
-    """يغيّر حالة بلاغ معيّن (يستخدمها فريق الدعم الفني). لا يمكن تغيير بلاغ ملغى."""
+def update_ticket_status(ticket_id, status, handler_email=""):
+    """يغيّر حالة بلاغ معيّن (يستخدمها فريق الدعم الفني). لا يمكن تغيير بلاغ ملغى.
+    البلاغ المحلول يُقفل نهائيًا على الجميع، حتى الموظف اللي حلّه بنفسه —
+    ما فيه رجوع له إلا لو انفتح بطريقة ثانية (مستقبلًا لو احتجتوها).
+    يسجّل أي موظف فني هو من قام بالتحديث، عشان الإنجاز يُنسب للشخص الصحيح فقط."""
     if status not in TICKET_STATUSES:
-        return False
+        return "invalid"
 
     with open(TICKETS_FILE, "r", encoding="utf-8") as f:
         reader = csv.reader(f)
         rows = list(reader)
 
+    result = "notfound"
     updated = False
     for row in rows[1:]:  # تخطي صف العناوين
-        if row and row[0] == str(ticket_id) and row[4] != "ملغى":
-            while len(row) < 8:
-                row.append("")  # صف قديم بدون عمود resolved_at
-            row[4] = status
-            if status == "تم حل الطلب":
-                row[7] = datetime.now().strftime("%Y-%m-%d %H:%M")
-            else:
-                row[7] = ""
-            updated = True
+        if not row or row[0] != str(ticket_id):
+            continue
+
+        while len(row) < 9:
+            row.append("")  # صف قديم بدون عمود resolved_at / handled_by
+
+        if row[4] == "ملغى":
+            result = "cancelled"
+            continue
+
+        if row[4] == "تم حل الطلب":
+            result = "locked"  # بلاغ محلول — مقفل نهائيًا على الجميع
+            continue
+
+        row[4] = status
+        if status == "تم حل الطلب":
+            row[7] = datetime.now().strftime("%Y-%m-%d %H:%M")
+            row[8] = handler_email
+        elif status == "جاري العمل عليه":
+            row[7] = ""
+            row[8] = handler_email
+        else:  # قيد التنفيذ — البلاغ يرجع لقائمة الانتظار العامة بدون موظف مسؤول عنه
+            row[7] = ""
+            row[8] = ""
+        updated = True
+        result = "ok"
 
     if updated:
         with open(TICKETS_FILE, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerows(rows)
 
-    return updated
+    return result
 
 
 def get_ticket_by_id(ticket_id, email):
@@ -559,6 +843,8 @@ def get_ticket_by_id(ticket_id, email):
                     row.append("0")  # صف قديم بدون عمود edited
                 while len(row) < 8:
                     row.append("")  # صف قديم بدون عمود resolved_at
+                while len(row) < 9:
+                    row.append("")  # صف قديم بدون عمود handled_by
                 return row
     return None
 
@@ -577,6 +863,8 @@ def update_ticket(ticket_id, email, title, description):
             while len(row) < 7:
                 row.append("0")
             while len(row) < 8:
+                row.append("")
+            while len(row) < 9:
                 row.append("")
             row[6] = "1"
             updated = True
@@ -599,8 +887,9 @@ def get_student_ticket_summary(email):
 
 @app.route("/dashboard")
 def dashboard():
-    if "user" not in session:
-        return redirect(url_for("login"))
+    guard = require_student()
+    if guard:
+        return guard
     total_tickets, open_tickets, resolved_tickets = get_student_ticket_summary(session.get("email", ""))
     return render_template(
         "dashboard.html",
@@ -614,15 +903,17 @@ def dashboard():
 
 @app.route("/about-college")
 def about_college():
-    if "user" not in session:
-        return redirect(url_for("login"))
+    guard = require_student()
+    if guard:
+        return guard
     return render_template("about_college.html", user=session["user"])
 
 
 @app.route("/intro-meeting")
 def intro_meeting():
-    if "user" not in session:
-        return redirect(url_for("login"))
+    guard = require_student()
+    if guard:
+        return guard
     return render_template("intro_meeting.html", user=session["user"])
 
 
@@ -724,8 +1015,9 @@ def delete_avatar_route():
 
 @app.route("/new-ticket", methods=["GET", "POST"])
 def new_ticket():
-    if "user" not in session:
-        return redirect(url_for("login"))
+    guard = require_student()
+    if guard:
+        return guard
 
     if request.method == "POST":
         title = request.form.get("title", "").strip()
@@ -744,8 +1036,9 @@ def new_ticket():
 
 @app.route("/tickets/<int:ticket_id>/edit", methods=["GET", "POST"])
 def edit_ticket(ticket_id):
-    if "user" not in session:
-        return redirect(url_for("login"))
+    guard = require_student()
+    if guard:
+        return guard
 
     ticket = get_ticket_by_id(ticket_id, session["email"])
     if not ticket:
@@ -781,8 +1074,9 @@ def edit_ticket(ticket_id):
 
 @app.route("/my-tickets")
 def my_tickets():
-    if "user" not in session:
-        return redirect(url_for("login"))
+    guard = require_student()
+    if guard:
+        return guard
 
     tickets = get_tickets_by_email(session["email"])
     return render_template("my_tickets.html", tickets=tickets)
@@ -790,8 +1084,9 @@ def my_tickets():
 
 @app.route("/tickets/<int:ticket_id>/cancel", methods=["POST"])
 def cancel_ticket_route(ticket_id):
-    if "user" not in session:
-        return redirect(url_for("login"))
+    guard = require_student()
+    if guard:
+        return guard
 
     ticket = get_ticket_by_id(ticket_id, session["email"])
     if ticket and ticket[4] == "تم حل الطلب":

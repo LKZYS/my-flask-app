@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>College IT Support | بلاغات الطلاب</title>
+<title>College IT Support | أرشيف البلاغات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{ --ink:#0F1A18; --ink-soft:#16241F; --panel:rgba(244,238,225,.05); --gold:#C8A24A; --sand:#F4EEE1; --line:rgba(244,238,225,.14); --muted:rgba(244,238,225,.55); --teal:#3FA8C7; --err:#C4623F; --ok:#2E7D5B; --warn:#D9A72A; }
@@ -70,7 +70,7 @@
   /* ===== Stats row ===== */
   .stats-row{
     display:grid;
-    grid-template-columns:repeat(4, 1fr);
+    grid-template-columns:repeat(3, 1fr);
     gap:14px;
     margin-bottom:28px;
   }
@@ -86,10 +86,9 @@
     display:flex; align-items:center; justify-content:center;
   }
   .stat-icon svg{ width:20px; height:20px; }
-  .stat-icon.c-students{ background:rgba(63,168,199,.14); color:var(--teal); }
   .stat-icon.c-total{ background:rgba(200,162,74,.14); color:var(--gold); }
-  .stat-icon.c-open{ background:rgba(217,167,42,.16); color:var(--warn); }
   .stat-icon.c-resolved{ background:rgba(46,125,91,.18); color:#5FC393; }
+  .stat-icon.c-cancelled{ background:rgba(244,238,225,.1); color:var(--muted); }
   .stat-num{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:22px; line-height:1.1; }
   .stat-label{ font-size:12px; color:var(--muted); margin-top:3px; }
   @media (max-width: 900px){ .stats-row{ grid-template-columns:repeat(2, 1fr); } }
@@ -189,7 +188,6 @@
     display:inline-flex; align-items:center; gap:5px;
     background:rgba(244,238,225,.05); border:1px solid var(--line); color:var(--muted);
   }
-  .mini-chip.mc-open{ color:var(--warn); border-color:rgba(217,167,42,.35); }
   .mini-chip.mc-resolved{ color:#5FC393; border-color:rgba(46,125,91,.4); }
   .mini-chip .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; }
 
@@ -218,12 +216,7 @@
     flex-shrink:0; white-space:nowrap;
   }
   .badge.cancelled{ background:rgba(244,238,225,.15); color:var(--muted); }
-  .badge.working{ background:#D9A72A; color:#2A2205; }
   .badge.resolved{ background:#2E7D5B; color:#fff; }
-  .badge.locked{
-    background:rgba(46,125,91,.18); color:#5FC393;
-    border:1px solid rgba(46,125,91,.45); cursor:not-allowed;
-  }
 
   .handler-row{ margin-top:8px; padding-top:8px; border-top:1px dashed var(--line); }
   .handler-chip{
@@ -231,30 +224,6 @@
     display:inline-flex; align-items:center; gap:4px;
   }
   .handler-chip.hc-resolved{ color:#5FC393; }
-
-  .status-form{ display:flex; align-items:center; }
-  .status-select{
-    background:rgba(244,238,225,.06); color:var(--sand);
-    border:1.5px solid var(--line); border-radius:20px;
-    padding:4px 10px; font-family:inherit; font-size:11px;
-    cursor:pointer; outline:none;
-  }
-  .status-select:focus{ border-color:var(--gold); }
-  .status-select.st-cancelled{ background:rgba(244,238,225,.15); color:var(--muted); cursor:not-allowed; }
-  .status-select.st-progress{ border-color:#C4623F; }
-  .status-select.st-working{ border-color:#D9A72A; }
-  .status-select.st-resolved{ border-color:#2E7D5B; }
-
-  .status-select option{
-    background:#FFFFFF;
-    color:var(--ink);
-    font-weight:600;
-    padding:8px;
-  }
-  .status-select option:checked{
-    background:#EFE6CD;
-    color:var(--ink);
-  }
 
   /* ===== Entrance motion ===== */
   @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
@@ -277,16 +246,14 @@
 </head>
 <body>
 
-  {% set open_stats = namespace(total=0, open=0, resolved=0, cancelled=0) %}
+  {% set arch_stats = namespace(total=0, resolved=0, cancelled=0) %}
   {% for s in students %}
     {% for t in s.tickets %}
-      {% set open_stats.total = open_stats.total + 1 %}
+      {% set arch_stats.total = arch_stats.total + 1 %}
       {% if t[4] == 'تم حل الطلب' %}
-        {% set open_stats.resolved = open_stats.resolved + 1 %}
-      {% elif t[4] == 'قيد التنفيذ' or t[4] == 'جاري العمل عليه' %}
-        {% set open_stats.open = open_stats.open + 1 %}
+        {% set arch_stats.resolved = arch_stats.resolved + 1 %}
       {% elif t[4] == 'ملغى' %}
-        {% set open_stats.cancelled = open_stats.cancelled + 1 %}
+        {% set arch_stats.cancelled = arch_stats.cancelled + 1 %}
       {% endif %}
     {% endfor %}
   {% endfor %}
@@ -303,8 +270,8 @@
       <div class="hero-blob-teal"></div>
       <div class="hero-text">
         <span class="eyebrow">فريق الدعم الفني</span>
-        <h1>بلاغات الطلاب</h1>
-        <p>اضغط على بطاقة الطالب لعرض بلاغاته، أو استخدم البحث تحت لإيجاد طالب معيّن بسرعة.</p>
+        <h1>أرشيف البلاغات</h1>
+        <p>سجل كامل لكل البلاغات المغلقة (محلولة أو ملغاة) من كل الأوقات، للعرض فقط بدون إمكانية تعديل.</p>
       </div>
       <div class="hero-mark">
         <img src="{{ url_for('static', filename='tvtc-logo.webp') }}" alt="شعار المؤسسة">
@@ -313,28 +280,24 @@
 
     <div class="stats-row">
       <div class="stat-card">
-        <div class="stat-icon c-students"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 5L21 9L12 13L3 9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 11V16C7 16 9 18 12 18C15 18 17 16 17 16V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div><div class="stat-num">{{ students|length }}</div><div class="stat-label">طالب لديه بلاغات</div></div>
-      </div>
-      <div class="stat-card">
         <div class="stat-icon c-total"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H20M4 12H20M4 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
-        <div><div class="stat-num">{{ open_stats.total }}</div><div class="stat-label">إجمالي البلاغات</div></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-icon c-open"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12L15 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div><div class="stat-num">{{ open_stats.open }}</div><div class="stat-label">قيد المتابعة</div></div>
+        <div><div class="stat-num">{{ arch_stats.total }}</div><div class="stat-label">إجمالي البلاغات المؤرشفة</div></div>
       </div>
       <div class="stat-card">
         <div class="stat-icon c-resolved"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <div><div class="stat-num">{{ open_stats.resolved }}</div><div class="stat-label">تم حلها</div></div>
+        <div><div class="stat-num">{{ arch_stats.resolved }}</div><div class="stat-label">بلاغات محلولة</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon c-cancelled"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6L18 18M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <div><div class="stat-num">{{ arch_stats.cancelled }}</div><div class="stat-label">بلاغات ملغاة</div></div>
       </div>
     </div>
 
     {% if students %}
       <div class="toolbar">
         <div>
-          <h2>قائمة الطلاب</h2>
-          <p class="sub">{{ students|length }} طالب — اضغط لعرض التفاصيل</p>
+          <h2>سجل الطلاب</h2>
+          <p class="sub">{{ students|length }} طالب لديه بلاغات مؤرشفة — اضغط لعرض التفاصيل</p>
         </div>
         <div class="search-wrap">
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -344,21 +307,17 @@
 
       <div class="tabs" id="tabsWrap">
         <span class="tab-highlight" id="tabHighlight"></span>
-        <button class="tab active" data-filter="all">الكل <span class="tab-count">{{ open_stats.total }}</span></button>
-        <button class="tab" data-filter="open">قيد المعالجة <span class="tab-count">{{ open_stats.open }}</span></button>
-        <button class="tab" data-filter="resolved">تم الحل <span class="tab-count">{{ open_stats.resolved }}</span></button>
-        <button class="tab" data-filter="cancelled">ملغى <span class="tab-count">{{ open_stats.cancelled }}</span></button>
+        <button class="tab active" data-filter="all">الكل <span class="tab-count">{{ arch_stats.total }}</span></button>
+        <button class="tab" data-filter="resolved">تم الحل <span class="tab-count">{{ arch_stats.resolved }}</span></button>
+        <button class="tab" data-filter="cancelled">ملغى <span class="tab-count">{{ arch_stats.cancelled }}</span></button>
       </div>
 
       <div class="grid" id="studentGrid">
         {% for s in students %}
-          {% set s_open = namespace(count=0) %}
           {% set s_resolved = namespace(count=0) %}
           {% for t in s.tickets %}
             {% if t[4] == 'تم حل الطلب' %}
               {% set s_resolved.count = s_resolved.count + 1 %}
-            {% elif t[4] == 'قيد التنفيذ' or t[4] == 'جاري العمل عليه' %}
-              {% set s_open.count = s_open.count + 1 %}
             {% endif %}
           {% endfor %}
           <details class="student-card" data-search="{{ (s.full_name ~ ' ' ~ s.training_number)|lower }}">
@@ -371,13 +330,12 @@
               <div class="chev"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9L12 15L18 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
             </summary>
             <div class="mini-stats">
-              <span class="mini-chip">{{ s.tickets|length }} بلاغ</span>
-              {% if s_open.count > 0 %}<span class="mini-chip mc-open"><span class="dot"></span>{{ s_open.count }} قيد المتابعة</span>{% endif %}
+              <span class="mini-chip">{{ s.tickets|length }} بلاغ مؤرشف</span>
               {% if s_resolved.count > 0 %}<span class="mini-chip mc-resolved"><span class="dot"></span>{{ s_resolved.count }} محلول</span>{% endif %}
             </div>
             <div class="ticket-list">
               {% for t in s.tickets %}
-                {% set st = 'cancelled' if t[4] == 'ملغى' else ('resolved' if t[4] == 'تم حل الطلب' else 'open') %}
+                {% set st = 'cancelled' if t[4] == 'ملغى' else 'resolved' %}
                 <div class="ticket-item" data-status="{{ st }}">
                   <div class="ticket-title">{{ t[2] }} <span class="ticket-id">#{{ t[0] }}</span></div>
                   <div class="ticket-desc">{{ t[3] }}</div>
@@ -385,23 +343,14 @@
                     <span class="ticket-date">{{ t[5] }}</span>
                     {% if t[4] == 'ملغى' %}
                       <span class="badge cancelled">ملغى</span>
-                    {% elif t[4] == 'تم حل الطلب' %}
-                      <span class="badge locked">🔒 تم حل الطلب</span>
                     {% else %}
-                      <form class="status-form" method="POST" action="{{ url_for('update_ticket_status_route', ticket_id=t[0]) }}">
-                        <select name="status" class="status-select {{ 'st-progress' if t[4] == 'قيد التنفيذ' else ('st-working' if t[4] == 'جاري العمل عليه' else 'st-resolved') }}" onchange="this.form.submit()">
-                          {% for st in statuses %}
-                            <option value="{{ st }}" {{ 'selected' if t[4] == st }}>{{ st }}</option>
-                          {% endfor %}
-                        </select>
-                      </form>
+                      <span class="badge resolved">✓ تم حل الطلب</span>
                     {% endif %}
                   </div>
                   {% if t[8] %}
                     <div class="handler-row">
                       <span class="handler-chip {{ 'hc-resolved' if t[4] == 'تم حل الطلب' else '' }}">
                         {{ 'حلّها' if t[4] == 'تم حل الطلب' else 'يتابعها' }}: {{ staff_names.get(t[8], t[8]) }}
-                        {% if t[8] == current_staff_email %}(أنت){% endif %}
                       </span>
                     </div>
                   {% endif %}
@@ -414,7 +363,7 @@
 
       <div class="no-match" id="noMatch">ما فيه طالب مطابق للبحث.</div>
     {% else %}
-      <div class="empty">لا توجد بلاغات واردة حاليًا.</div>
+      <div class="empty">لا يوجد بلاغات مؤرشفة حتى الآن.</div>
     {% endif %}
   </main>
 

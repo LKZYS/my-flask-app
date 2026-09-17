@@ -231,6 +231,12 @@
   .overview-card.pending .icon-badge{ color:#D9A72A; background:linear-gradient(135deg, rgba(217,167,42,.26), rgba(217,167,42,.06)); box-shadow:inset 0 0 0 1px rgba(217,167,42,.3); }
   .overview-card.students .num{ color:#7FA8D9; }
   .overview-card.students .icon-badge{ color:#7FA8D9; background:linear-gradient(135deg, rgba(105,150,199,.26), rgba(105,150,199,.06)); box-shadow:inset 0 0 0 1px rgba(105,150,199,.3); }
+  .overview-card.avgtime .num{ color:var(--teal, #3FA8C7); font-size:21px; }
+  .overview-card.avgtime .icon-badge{ color:#3FA8C7; background:linear-gradient(135deg, rgba(63,168,199,.26), rgba(63,168,199,.06)); box-shadow:inset 0 0 0 1px rgba(63,168,199,.3); }
+  .overview-card.today .num{ color:#D9865A; }
+  .overview-card.today .icon-badge{ color:#D9865A; background:linear-gradient(135deg, rgba(196,98,63,.26), rgba(196,98,63,.06)); box-shadow:inset 0 0 0 1px rgba(196,98,63,.3); }
+  .overview-card.topstaff .num{ font-size:18px; }
+  .overview-card.topstaff .icon-badge{ background:linear-gradient(135deg, rgba(200,162,74,.26), rgba(200,162,74,.06)); box-shadow:inset 0 0 0 1px rgba(200,162,74,.3); }
 
   .grid{
     display:grid;
@@ -370,6 +376,9 @@
   .overview-card:nth-child(1){ animation-delay:.22s; }
   .overview-card:nth-child(2){ animation-delay:.28s; }
   .overview-card:nth-child(3){ animation-delay:.34s; }
+  .overview-card:nth-child(4){ animation-delay:.40s; }
+  .overview-card:nth-child(5){ animation-delay:.46s; }
+  .overview-card:nth-child(6){ animation-delay:.52s; }
   .grid .card{ animation:fadeUp .55s ease both; }
   .grid .card:nth-child(1){ animation-delay:.46s; }
   .grid .card:nth-child(2){ animation-delay:.52s; }
@@ -429,15 +438,15 @@
     </div>
 
     <div class="panel-section">
-      <p class="section-label">إحصائيات سريعة</p>
+      <p class="section-label">إنجازك الشخصي</p>
       <div class="stats-row">
         <div class="stat-box">
           <div class="stat-num">{{ resolved_count }}</div>
-          <div class="stat-label">تم حلها</div>
+          <div class="stat-label">حلّيتها</div>
         </div>
         <div class="stat-box">
           <div class="stat-num">{{ ongoing_count }}</div>
-          <div class="stat-label">جارية</div>
+          <div class="stat-label">تتابعها الآن</div>
         </div>
       </div>
     </div>
@@ -493,14 +502,14 @@
           <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <div>
             <div class="num">{{ resolved_count }}</div>
-            <div class="label">بلاغات تم حلها هذا الشهر</div>
+            <div class="label">بلاغات حللتها آخر 30 يوم</div>
           </div>
         </div>
         <div class="overview-card pending">
           <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12L15 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <div>
             <div class="num">{{ open_queue }}</div>
-            <div class="label">بلاغات قيد المتابعة حاليًا</div>
+            <div class="label">بلاغات قيد المتابعة حاليًا (كل الفريق)</div>
           </div>
         </div>
         <div class="overview-card students">
@@ -508,6 +517,27 @@
           <div>
             <div class="num">{{ student_count }}</div>
             <div class="label">إجمالي الطلاب المسجّلين</div>
+          </div>
+        </div>
+        <div class="overview-card avgtime">
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="13" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 13V9.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M9.5 3H14.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div>
+            <div class="num">{{ avg_resolution_time or '—' }}</div>
+            <div class="label">متوسط وقت الحل</div>
+          </div>
+        </div>
+        <div class="overview-card today">
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3.5" y="5" width="17" height="15.5" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 9.5H20.5" stroke="currentColor" stroke-width="1.8"/><path d="M8 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div>
+            <div class="num">{{ today_ticket_count }}</div>
+            <div class="label">بلاغات وصلت اليوم</div>
+          </div>
+        </div>
+        <div class="overview-card topstaff">
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 4H17V9C17 12.3137 14.7614 15 12 15C9.23858 15 7 12.3137 7 9V4Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 5H4V6C4 8.20914 5.5 10 7.5 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M17 5H20V6C20 8.20914 18.5 10 16.5 10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 15V19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M8 21H16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div>
+            <div class="num">{{ top_staff_name or 'لا يوجد بعد' }}</div>
+            <div class="label">{% if top_staff_name %}أفضل موظف هذا الشهر ({{ top_staff_count }} بلاغ){% else %}أفضل موظف هذا الشهر{% endif %}</div>
           </div>
         </div>
       </div>
@@ -522,9 +552,21 @@
         </a>
         <a href="{{ url_for('profile') }}" class="card c-blue">
           <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div class="icon-badge">
+            {% if current_avatar_url %}
+              <img src="{{ current_avatar_url }}" alt="{{ user }}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+            {% else %}
+              <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="8" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c0-4.4 3.6-7 8-7s8 2.6 8 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            {% endif %}
+          </div>
           <div class="title">الملف الشخصي</div>
           <div class="sub">تعديل بياناتك الشخصية</div>
+        </a>
+        <a href="{{ url_for('it_archive') }}" class="card" style="grid-column:1 / -1;">
+          <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21V19C21 19.5523 20.5523 20 20 20H4C3.44772 20 3 19.5523 3 19V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 7L5 4H19L21 7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 11H14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div class="title">سجل البلاغات المؤرشفة</div>
+          <div class="sub">{{ archive_count }} بلاغات مؤرشفة — تستطيع الرجوع لأي طلب سابق بسهولة</div>
         </a>
       </div>
     </main>
