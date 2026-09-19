@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College IT Support | خدمة التدريب التعاوني</title>
+<script>
+  (function(){
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0F1A18; --gold:#C8A24A; --sand:#F4EEE1; --line:#E1D9C4; --muted:#7A7263; --teal:#1F7A8C;
+         --c-pending:#D9A72A; --c-accepted:#2E7D5B; --c-rejected:#C4623F; --c-expired:#8A8A8A;
+         --c-awaiting:#3F7EA8; --c-college_rejected:#C4623F; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--sand);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 32px;
+  }
+  .back-link{
+    color:var(--ink); text-decoration:none; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:8px;
+    background:#fff; border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; transition:border-color .15s ease, background .15s ease;
+  }
+  .back-link svg{ width:16px; height:16px; flex-shrink:0; }
+  .back-link:hover{ border-color:var(--gold); background:#FBF8F0; }
+
+  .new-btn{
+    background:var(--ink); color:var(--sand); text-decoration:none;
+    padding:10px 18px; border-radius:8px; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:6px;
+    transition:background .15s ease;
+  }
+  .new-btn:hover{ background:#1B322C; }
+  .flash{
+    background:#FBEAE3; border:1px solid #C4623F; color:#8A3B22;
+    font-size:14px; padding:12px 16px; border-radius:8px; margin-bottom:20px;
+  }
+  .flash-success{ background:#E6F4EC; border-color:#2E7D5B; color:#1E5A3F; }
+  .empty .empty-cta{ display:inline-block; margin-top:16px; color:var(--ink); font-weight:600; text-decoration:none; border-bottom:1.5px solid var(--gold); padding-bottom:2px; }
+  .side-fill{
+    position:fixed; top:0; bottom:0; z-index:-1; pointer-events:none;
+    width:max(0px, calc((100vw - 1300px) / 2));
+    background-image:
+      repeating-linear-gradient(55deg, transparent 0 70px, var(--line) 70px 71px),
+      repeating-linear-gradient(-55deg, transparent 0 70px, var(--line) 70px 71px);
+    opacity:.55;
+    -webkit-mask-image:linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+            mask-image:linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+  }
+  .side-fill.left{ left:0; }
+  .side-fill.right{ right:0; }
+
+  .content{ max-width:900px; margin:0 auto; padding:12px 24px 70px; position:relative; z-index:1; }
+  .content h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:28px; margin-bottom:6px; }
+  .content .sub{ color:var(--muted); font-size:14px; margin-bottom:26px; }
+
+  /* ===== Request cards ===== */
+  /* ===== Filter tabs ===== */
+  .tabs{
+    position:relative; display:inline-flex; flex-wrap:wrap; gap:2px; margin-bottom:22px;
+    background:#fff; border:1.5px solid var(--line); border-radius:24px; padding:4px;
+  }
+  .tab-highlight{
+    position:absolute; top:4px; bottom:4px; right:4px;
+    background:var(--ink); border-radius:20px;
+    transition:right .32s cubic-bezier(.65,0,.35,1), width .32s cubic-bezier(.65,0,.35,1);
+    z-index:0;
+  }
+  .tab{
+    position:relative; z-index:1;
+    font-family:inherit; font-size:13px; color:var(--muted); background:none;
+    border:none; border-radius:20px; padding:8px 16px; cursor:pointer;
+    display:inline-flex; align-items:center; gap:7px;
+    transition:color .25s ease;
+  }
+  .tab:hover{ color:var(--ink); }
+  .tab.active, .tab.active:hover{ color:var(--sand); }
+  .tab-count{
+    font-size:10.5px; font-weight:700; min-width:18px; height:18px; padding:0 5px;
+    border-radius:10px; display:inline-flex; align-items:center; justify-content:center;
+    background:rgba(122,114,99,.14); color:var(--muted);
+    transition:background .25s ease, color .25s ease;
+  }
+  .tab.active .tab-count{ background:rgba(244,238,225,.18); color:var(--sand); }
+  .no-match{ display:none; padding:30px 8px; text-align:center; color:var(--muted); font-size:13.5px; }
+  .req-card{ transition:opacity .28s ease, transform .28s ease; }
+  .req-card.hide{ opacity:0; transform:translateY(-6px) scale(.98); pointer-events:none; }
+  @media (prefers-reduced-motion: reduce){ .tab-highlight, .tab, .tab-count, .req-card{ transition:none !important; } }
+
+  .list{ display:flex; flex-direction:column; gap:16px; }
+  .req-card{
+    background:#fff; border:1.5px solid var(--line);
+    border-inline-start:4px solid var(--status-color, var(--line));
+    border-radius:14px; padding:20px 22px;
+  }
+  .req-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:6px; }
+  .req-title{ font-weight:700; font-size:17px; }
+  .req-id{ font-size:12px; color:var(--muted); font-weight:400; margin-inline-start:8px; }
+  .req-pos{ font-size:13.5px; color:var(--muted); margin-bottom:16px; }
+
+  .badge{
+    display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:20px;
+    font-size:12px; font-weight:600; color:#fff; white-space:nowrap;
+  }
+  .badge.pending{ background:var(--c-pending); color:#2A2205; }
+  .badge.accepted{ background:var(--c-accepted); }
+  .badge.rejected{ background:var(--c-rejected); }
+  .badge.expired{ background:var(--c-expired); }
+  .badge.awaiting{ background:var(--c-awaiting); }
+  .badge.college_rejected{ background:var(--c-college_rejected); }
+
+  /* ===== Progress steps ===== */
+  .steps{ display:flex; align-items:center; margin:4px 0 18px; }
+  .step{ display:flex; align-items:center; gap:8px; font-size:12.5px; color:var(--muted); }
+  .step .dot{
+    width:24px; height:24px; border-radius:50%; flex-shrink:0;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:12px; font-weight:700;
+    border:1.5px solid var(--line); background:#fff; color:var(--muted);
+  }
+  .step.done{ color:var(--ink); }
+  .step.done .dot{ background:var(--teal); border-color:var(--teal); color:#fff; }
+  .step.current{ color:var(--ink); font-weight:600; }
+  .step.current .dot{ border-color:var(--status-color); color:var(--ink); box-shadow:0 0 0 4px rgba(200,162,74,.18); }
+  .step-line{ flex:1; height:2px; background:var(--line); margin:0 10px; min-width:24px; }
+  .step-line.done{ background:var(--teal); }
+
+  .info-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; }
+  .info{ background:var(--sand); border:1px solid var(--line); border-radius:10px; padding:10px 14px; }
+  .info .k{ font-size:11.5px; color:var(--muted); margin-bottom:3px; }
+  .info .v{ font-size:14px; font-weight:600; }
+
+  .note{
+    margin-top:14px; font-size:13px; line-height:1.8; padding:11px 14px; border-radius:10px;
+    background:#FBF6E6; border:1px solid #EBDDAE; color:#6B5514;
+  }
+  .note.ok{ background:#E6F4EC; border-color:#B5DCC5; color:#1E5A3F; }
+  .note.bad{ background:#FBEAE3; border-color:#EBC3B3; color:#8A3B22; }
+  .note.gray{ background:#F1F1F1; border-color:#DADADA; color:#555; }
+
+  .link-row{ margin-top:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .link-label{ flex-basis:100%; font-size:12.5px; font-weight:600; color:var(--ink); }
+  .link-box{
+    flex:1; min-width:200px; font-family:monospace; font-size:12px; color:var(--muted); direction:ltr; text-align:left;
+    background:var(--sand); border:1px solid var(--line); border-radius:8px; padding:10px 12px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .copy-btn{
+    font-family:inherit; font-size:13px; font-weight:600; color:#fff; background:var(--teal);
+    border:none; border-radius:8px; padding:10px 18px; cursor:pointer; flex-shrink:0;
+    transition:opacity .15s ease;
+  }
+  .copy-btn:hover{ opacity:.88; }
+  .copy-btn.copied{ background:var(--c-accepted); }
+
+  .cert-form{ margin-top:14px; }
+  .cert-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:8px; }
+  .cert-row input[type="file"]{
+    flex:1; min-width:200px; font-family:inherit; font-size:12.5px; color:var(--ink);
+    background:var(--sand); border:1px solid var(--line); border-radius:8px; padding:9px 10px;
+  }
+  html[data-theme="dark"] .cert-row input[type="file"]{ background:#101B18; border-color:#2A3A32; color:#EDE7D8; }
+  .docs-row{ margin-top:14px; }
+  .docs-label{ display:block; font-size:12.5px; font-weight:600; color:var(--ink); margin-bottom:8px; }
+  .doc-chip{
+    display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:var(--ink);
+    background:var(--sand); border:1px solid var(--line); border-radius:10px; padding:7px 12px 7px 7px;
+    font-size:13px; font-weight:600; margin:0 6px 6px 0; transition:border-color .15s ease, background .15s ease;
+  }
+  .doc-chip:hover{ border-color:var(--teal); background:#fff; }
+  .doc-thumb{ width:26px; height:26px; border-radius:6px; object-fit:cover; flex-shrink:0; }
+  .doc-icon{ font-size:16px; }
+  .doc-name{ max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+  .empty{ padding:56px 8px; text-align:center; color:var(--muted); font-size:14px; line-height:1.9; background:#fff; border:1.5px solid var(--line); border-radius:14px; }
+  .empty .empty-icon{ font-size:34px; margin-bottom:14px; }
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .content h1{ animation:fadeUp .55s ease .08s both; }
+  .content .sub{ animation:fadeIn .5s ease .16s both; }
+  .tabs{ animation:fadeIn .5s ease .2s both; }
+  .list, .empty{ animation:fadeUp .55s ease .24s both; }
+  @media (prefers-reduced-motion: reduce){
+    .topbar, .content h1, .content .sub, .tabs, .list, .empty{ animation:none !important; }
+  }
+
+  @media (max-width:600px){
+    .steps{ flex-direction:column; align-items:flex-start; gap:8px; }
+    .step-line{ display:none; }
+  }
+
+  /* ===== Dark mode ===== */
+  html[data-theme="dark"] body{ background:#0B1412; color:#EDE7D8; }
+  html[data-theme="dark"] .empty .empty-cta{ color:#EDE7D8; }
+  html[data-theme="dark"] .tabs{ background:#16221D; border-color:#2A3A32; }
+  html[data-theme="dark"] .tab{ color:#9CA79E; }
+  html[data-theme="dark"] .tab:hover{ color:#EDE7D8; }
+  html[data-theme="dark"] .tab.active, html[data-theme="dark"] .tab.active:hover{ color:var(--sand); }
+  html[data-theme="dark"] .tab-highlight{ background:var(--teal); }
+  html[data-theme="dark"] .tab-count{ background:rgba(156,167,158,.16); color:#9CA79E; }
+  html[data-theme="dark"] .tab.active .tab-count{ background:rgba(6,37,34,.28); color:#EDE7D8; }
+  html[data-theme="dark"] .no-match{ color:#9CA79E; }
+  html[data-theme="dark"] .link-label{ color:#EDE7D8; }
+  html[data-theme="dark"] .link-box{ background:#101B18; border-color:#2A3A32; color:#9CA79E; }
+  html[data-theme="dark"] .back-link{ background:#16221D; border-color:#2A3A32; color:#EDE7D8; }
+  html[data-theme="dark"] .back-link:hover{ background:#1B2A24; border-color:var(--gold); }
+  html[data-theme="dark"] .side-fill{
+    opacity:.6;
+    background-image:
+      repeating-linear-gradient(55deg, transparent 0 70px, rgba(200,162,74,.12) 70px 71px),
+      repeating-linear-gradient(-55deg, transparent 0 70px, rgba(200,162,74,.12) 70px 71px);
+  }
+  html[data-theme="dark"] .content .sub,
+  html[data-theme="dark"] .req-id,
+  html[data-theme="dark"] .req-pos,
+  html[data-theme="dark"] .empty,
+  html[data-theme="dark"] .info .k,
+  html[data-theme="dark"] .step{ color:#9CA79E; }
+  html[data-theme="dark"] .step.done, html[data-theme="dark"] .step.current{ color:#EDE7D8; }
+  html[data-theme="dark"] .req-card,
+  html[data-theme="dark"] .empty{ background:#16221D; border-color:#2A3A32; }
+  html[data-theme="dark"] .step .dot{ background:#16221D; border-color:#2A3A32; }
+  html[data-theme="dark"] .step.done .dot{ background:var(--teal); border-color:var(--teal); }
+  html[data-theme="dark"] .step.current .dot{ color:#EDE7D8; background:#101B18; }
+  html[data-theme="dark"] .new-btn{ background:var(--teal); color:#fff; }
+  html[data-theme="dark"] .new-btn:hover{ background:#26909F; }
+  html[data-theme="dark"] .flash{ background:#2A1811; border-color:#5A2E1F; color:#EBB9A6; }
+  html[data-theme="dark"] .flash-success{ background:#10251B; border-color:#1F4A34; color:#A9DBC0; }
+  html[data-theme="dark"] .step-line{ background:#2A3A32; }
+  html[data-theme="dark"] .step-line.done{ background:var(--teal); }
+  html[data-theme="dark"] .info{ background:#101B18; border-color:#2A3A32; }
+  html[data-theme="dark"] .docs-label{ color:#EDE7D8; }
+  html[data-theme="dark"] .doc-chip{ background:#101B18; border-color:#2A3A32; color:#EDE7D8; }
+  html[data-theme="dark"] .doc-chip:hover{ background:#16221D; border-color:var(--teal); }
+  html[data-theme="dark"] .note{ background:#2A2510; border-color:#4A4020; color:#E6D9A6; }
+  html[data-theme="dark"] .note.ok{ background:#10251B; border-color:#1F4A34; color:#A9DBC0; }
+  html[data-theme="dark"] .note.bad{ background:#2A1811; border-color:#5A2E1F; color:#EBB9A6; }
+  html[data-theme="dark"] .note.gray{ background:#1B211F; border-color:#2A3A32; color:#9CA79E; }
+</style>
+</head>
+<body>
+
+  <div class="side-fill left" aria-hidden="true"></div>
+  <div class="side-fill right" aria-hidden="true"></div>
+
+  <div class="topbar">
+    <a class="back-link" href="{{ url_for('dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
+    <a class="new-btn" href="{{ url_for('coop_student_request') }}">+ طلب تدريب جديد</a>
+  </div>
+
+  <main class="content">
+    <h1>خدمة التدريب التعاوني</h1>
+    <p class="sub">تابع حالة طلب تدريبك وردّ المنشأة عليه</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% if requests %}
+      {% set ns = namespace(awaiting=0, pending=0, accepted=0, rejected=0) %}
+      {% for r in requests %}
+        {% if r.state == 'awaiting' %}{% set ns.awaiting = ns.awaiting + 1 %}
+        {% elif r.state in ('pending', 'expired') %}{% set ns.pending = ns.pending + 1 %}
+        {% elif r.state == 'accepted' %}{% set ns.accepted = ns.accepted + 1 %}
+        {% else %}{% set ns.rejected = ns.rejected + 1 %}{% endif %}
+      {% endfor %}
+
+      <div class="tabs" id="tabsWrap">
+        <span class="tab-highlight" id="tabHighlight"></span>
+        <button class="tab active" type="button" data-filter="all">الكل <span class="tab-count">{{ requests|length }}</span></button>
+        <button class="tab" type="button" data-filter="awaiting">بانتظار الكلية <span class="tab-count">{{ ns.awaiting }}</span></button>
+        <button class="tab" type="button" data-filter="pending">عند الجهة <span class="tab-count">{{ ns.pending }}</span></button>
+        <button class="tab" type="button" data-filter="accepted">مقبول <span class="tab-count">{{ ns.accepted }}</span></button>
+        <button class="tab" type="button" data-filter="rejected">مرفوض <span class="tab-count">{{ ns.rejected }}</span></button>
+      </div>
+
+      <div class="list" id="reqList">
+        {% for r in requests %}
+          {% set label = {'awaiting': 'بانتظار إصدار الخطاب', 'pending': 'قيد المراجعة عند المنشأة', 'accepted': 'تم القبول', 'rejected': 'مرفوض', 'expired': 'انتهت صلاحية الرابط', 'college_rejected': 'رفضته الكلية'}[r.state] %}
+          {% set icon = {'awaiting': '📝', 'pending': '⏳', 'accepted': '✓', 'rejected': '✖', 'expired': '⌛', 'college_rejected': '✖'}[r.state] %}
+          {% set tab = 'awaiting' if r.state == 'awaiting' else ('pending' if r.state in ('pending', 'expired') else ('accepted' if r.state == 'accepted' else 'rejected')) %}
+          <div class="req-card" data-status="{{ tab }}" style="--status-color: var(--c-{{ r.state }});">
+            <div class="req-head">
+              <div>
+                <span class="req-title">{{ r.company_name }}</span>
+                <span class="req-id">#{{ r.id }}</span>
+              </div>
+              <span class="badge {{ r.state }}">{{ icon }} {{ label }}</span>
+            </div>
+            <p class="req-pos">{{ r.position_title or 'المسمى الوظيفي غير محدد' }}</p>
+
+            {% if r.state == 'accepted' %}
+              {% set cur = 6 if r.completion_status == 'معتمدة' else 5 %}
+              {% set labels = ['تقديم الطلب', 'إصدار الخطاب', 'مراجعة المنشأة', 'القبول', 'شهادة الإتمام'] %}
+            {% else %}
+              {% set cur = {'awaiting': 2, 'college_rejected': 2, 'pending': 3, 'expired': 3, 'rejected': 4}[r.state] %}
+              {% set l2 = 'رفض الكلية' if r.state == 'college_rejected' else 'إصدار الخطاب' %}
+              {% set l4 = 'الرفض' if r.state == 'rejected' else 'القرار' %}
+              {% set labels = ['تقديم الطلب', l2, 'مراجعة المنشأة', l4] %}
+            {% endif %}
+            <div class="steps">
+              {% for lb in labels %}
+                {% set i = loop.index %}
+                <div class="step {{ 'done' if i < cur else ('current' if i == cur else '') }}"><span class="dot">{{ '✓' if i < cur else i }}</span>{{ lb }}</div>
+                {% if not loop.last %}<div class="step-line {{ 'done' if i < cur else '' }}"></div>{% endif %}
+              {% endfor %}
+            </div>
+
+            <div class="info-grid">
+              {% if r.state in ('awaiting', 'college_rejected') %}
+                <div class="info"><div class="k">تاريخ تقديم الطلب</div><div class="v">{{ r.created_at or '—' }}</div></div>
+              {% else %}
+                <div class="info"><div class="k">تاريخ إصدار الخطاب</div><div class="v">{{ r.created_at or '—' }}</div></div>
+              {% endif %}
+              {% if r.state == 'accepted' %}
+                <div class="info"><div class="k">المشرف الميداني</div><div class="v">{{ r.supervisor_name or '—' }}</div></div>
+                <div class="info"><div class="k">تاريخ بداية التدريب</div><div class="v">{{ r.start_date or 'لم يُحدد بعد' }}</div></div>
+                <div class="info"><div class="k">تاريخ نهاية التدريب</div><div class="v">{{ r.end_date or 'لم يُحدد بعد' }}</div></div>
+              {% elif r.state in ('rejected', 'college_rejected') %}
+                <div class="info"><div class="k">تاريخ القرار</div><div class="v">{{ r.decided_at or '—' }}</div></div>
+              {% elif r.state == 'pending' %}
+                <div class="info"><div class="k">مهلة رد المنشأة حتى</div><div class="v">{{ r.expires_at or '—' }}</div></div>
+              {% endif %}
+            </div>
+
+            {% if r.documents %}
+              <div class="docs-row">
+                <span class="docs-label">خطاب التدريب</span>
+                {% for doc in r.documents %}
+                  <a class="doc-chip" href="{{ doc.url }}" target="_blank" rel="noopener">
+                    {% if doc.is_image %}
+                      <img class="doc-thumb" src="{{ doc.url }}" alt="{{ doc.name }}">
+                    {% else %}
+                      <span class="doc-icon">📄</span>
+                    {% endif %}
+                    <span class="doc-name">{{ doc.name }}</span>
+                  </a>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            {% if r.state == 'awaiting' %}
+              <div class="note">طلبك وصل للكلية وبانتظار إصدار الخطاب الموجّه للجهة. بيتحدّث الوضع هنا بمجرد ما يصدره مسؤول التدريب.</div>
+            {% elif r.state == 'college_rejected' %}
+              <div class="note bad">رفضت الكلية هذا الطلب.{% if r.college_reject_reason %} السبب: {{ r.college_reject_reason }}{% endif %} تقدر تقدّم طلب جديد لجهة ثانية.</div>
+            {% elif r.state == 'pending' %}
+              <div class="note">أصدرت الكلية الخطاب. سلّم الرابط أدناه للجهة عشان تقبل أو ترفض طلبك منه، وبيتحدّث الوضع هنا تلقائيًا بعد ردّها.</div>
+              {% if r.link %}
+                <div class="link-row">
+                  <span class="link-label">رابط الجهة</span>
+                  <span class="link-box" id="link-{{ r.id }}">{{ r.link }}</span>
+                  <button class="copy-btn" data-copy-target="link-{{ r.id }}" type="button">نسخ الرابط</button>
+                </div>
+              {% endif %}
+            {% elif r.state == 'accepted' %}
+              <div class="note ok">مبروك! المنشأة وافقت على تدريبك. تواصل مع مشرفك الميداني قبل تاريخ البداية.</div>
+
+              {% if r.completion_status == 'معتمدة' %}
+                <div class="note ok">تم اعتماد إتمام التدريب من الكلية 🎓{% if r.final_certificate_url %} — شهادتك الرسمية جاهزة أدناه.{% endif %}</div>
+                {% if r.final_certificate_url %}
+                  <div class="docs-row">
+                    <span class="docs-label">الشهادة الرسمية</span>
+                    <a class="doc-chip" href="{{ r.final_certificate_url }}" target="_blank" rel="noopener">
+                      <span class="doc-icon">🎓</span><span class="doc-name">{{ r.final_certificate_name }}</span>
+                    </a>
+                  </div>
+                {% endif %}
+              {% elif r.completion_status == 'قيد المراجعة' %}
+                <div class="note">تم رفع شهادة الإتمام، بانتظار مراجعة الكلية لها.</div>
+                <div class="docs-row">
+                  <span class="docs-label">الشهادة المرفوعة</span>
+                  <a class="doc-chip" href="{{ r.completion_cert_url }}" target="_blank" rel="noopener">
+                    <span class="doc-icon">📄</span><span class="doc-name">{{ r.completion_cert_name }}</span>
+                  </a>
+                </div>
+              {% else %}
+                {% if r.completion_status == 'مرفوضة' %}
+                  <div class="note bad">رفضت الكلية شهادة الإتمام المرفوعة.{% if r.completion_reject_reason %} السبب: {{ r.completion_reject_reason }}{% endif %} ارفع شهادة محدّثة من المنشأة.</div>
+                {% endif %}
+                {% if true %}{# TEMP: تجاوز شرط training_ended مؤقتًا للاختبار — رجّعه لاحقًا #}
+                  <form class="cert-form" method="POST" action="{{ url_for('coop_submit_completion', req_id=r.id) }}" enctype="multipart/form-data">
+                    <label class="docs-label" for="cert-{{ r.id }}">ارفع شهادة إتمام التدريب من المنشأة (PDF أو صورة)</label>
+                    <div class="cert-row">
+                      <input type="file" name="completion_cert" id="cert-{{ r.id }}" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                      <button class="copy-btn" type="submit">رفع الشهادة</button>
+                    </div>
+                  </form>
+                {% else %}
+                  <div class="note gray">تقدر ترفع شهادة إتمام التدريب من المنشأة بعد تاريخ نهاية التدريب ({{ r.end_date or 'لم يُحدد بعد' }}).</div>
+                {% endif %}
+              {% endif %}
+            {% elif r.state == 'rejected' %}
+              <div class="note bad">للأسف المنشأة ما وافقت على الطلب. تواصل مع مسؤول التدريب في الكلية لإصدار خطاب لمنشأة ثانية.</div>
+            {% else %}
+              <div class="note gray">انتهت صلاحية رابط المنشأة قبل ما ترد. تواصل مع مسؤول التدريب في الكلية لإعادة الإرسال.</div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+      <p class="no-match" id="noMatch">ما فيه طلبات بهذي الحالة.</p>
+    {% else %}
+      <div class="empty">
+        <div class="empty-icon">🎓</div>
+        ما عندك أي طلبات تدريب تعاوني حاليًا.<br>
+        قدّم طلب وحدد الجهة اللي تبي تتدرب فيها، والكلية تصدر لك الخطاب الموجّه لها.<br>
+        <a class="empty-cta" href="{{ url_for('coop_student_request') }}">+ قدّم طلب تدريب جديد</a>
+      </div>
+    {% endif %}
+  </main>
+
+  <script>
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var target = document.getElementById(btn.dataset.copyTarget);
+        if (!target) return;
+        var text = target.textContent.trim();
+        function done(){
+          var original = btn.textContent;
+          btn.textContent = 'تم النسخ ✓';
+          btn.classList.add('copied');
+          setTimeout(function(){ btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done);
+        } else {
+          var ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+          ta.select(); document.execCommand('copy'); document.body.removeChild(ta); done();
+        }
+      });
+    });
+  </script>
+
+  <script>
+    (function(){
+      var tabsWrap = document.getElementById('tabsWrap');
+      if (!tabsWrap) return;
+      var highlight = document.getElementById('tabHighlight');
+      var tabs = document.querySelectorAll('.tab');
+      var cards = document.querySelectorAll('.req-card');
+      var noMatch = document.getElementById('noMatch');
+
+      function moveHighlight(tab, skipTransition){
+        if (!highlight || !tab) return;
+        if (skipTransition) highlight.style.transition = 'none';
+        var wrapRect = tabsWrap.getBoundingClientRect();
+        var tabRect = tab.getBoundingClientRect();
+        highlight.style.right = (wrapRect.right - tabRect.right) + 'px'; // RTL-safe
+        highlight.style.width = tabRect.width + 'px';
+        if (skipTransition){ highlight.getBoundingClientRect(); highlight.style.transition = ''; }
+      }
+
+      function applyFilter(filter){
+        var visible = 0;
+        cards.forEach(function(card){
+          var show = filter === 'all' || card.dataset.status === filter;
+          if (show){
+            visible++;
+            if (card.style.display === 'none'){
+              card.style.display = '';
+              card.classList.add('hide');
+              requestAnimationFrame(function(){ requestAnimationFrame(function(){ card.classList.remove('hide'); }); });
+            }
+          } else {
+            card.classList.add('hide');
+            setTimeout(function(){ if (card.classList.contains('hide')) card.style.display = 'none'; }, 280);
+          }
+        });
+        if (noMatch) noMatch.style.display = visible === 0 ? 'block' : 'none';
+      }
+
+      tabs.forEach(function(tab){
+        tab.addEventListener('click', function(){
+          tabs.forEach(function(t){ t.classList.remove('active'); });
+          tab.classList.add('active');
+          moveHighlight(tab);
+          applyFilter(tab.dataset.filter);
+        });
+      });
+
+      window.addEventListener('resize', function(){ moveHighlight(document.querySelector('.tab.active')); });
+      moveHighlight(document.querySelector('.tab.active'), true);
+      tabsWrap.addEventListener('animationend', function(){ moveHighlight(document.querySelector('.tab.active'), true); });
+    })();
+  </script>
+
+</body>
+</html>

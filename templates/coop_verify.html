@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>خطاب تدريب تعاوني | College Student Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1A22; --panel:#0F232C; --line:rgba(230,241,245,.14);
+    --sand:#EAF3F6; --muted:rgba(234,243,246,.6); --teal:#2FB6A8; --err:#C4623F; --amber:#D9A72A;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:radial-gradient(circle at 85% -10%, rgba(47,182,168,.14), transparent 40%), var(--ink);
+    color:var(--sand); min-height:100vh;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .page{ width:100%; max-width:580px; }
+
+  .brand-row{ display:flex; align-items:center; gap:10px; justify-content:center; margin-bottom:22px; }
+  .brand-row img{ width:34px; height:34px; object-fit:contain; }
+  .brand-row span{ font-family:'Tajawal', sans-serif; font-weight:700; font-size:14px; color:var(--muted); }
+
+  .card{
+    background:var(--panel); border:1.5px solid var(--line); border-radius:20px;
+    padding:34px; box-shadow:0 24px 55px rgba(0,0,0,.35);
+  }
+  .eyebrow{ font-size:12.5px; color:var(--teal); font-weight:600; }
+  h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:21px; margin:8px 0 18px; }
+
+  .letter{ background:rgba(230,241,245,.04); border:1px solid var(--line); border-radius:14px; padding:20px; margin-bottom:22px; }
+  .letter p{ font-size:13.5px; line-height:2; color:var(--sand); }
+  .letter b{ color:var(--teal); }
+
+  .docs-box{ margin-bottom:22px; }
+  .docs-title{ font-size:12.5px; font-weight:600; color:var(--muted); margin-bottom:8px; }
+  .docs-row{ display:flex; flex-wrap:wrap; gap:8px; }
+  .doc-chip{
+    font-size:12px; color:var(--sand); text-decoration:none;
+    background:rgba(230,241,245,.06); border:1px solid var(--line); border-radius:20px;
+    padding:7px 13px; display:inline-flex; align-items:center; gap:5px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .doc-chip:hover{ border-color:var(--teal); background:rgba(47,182,168,.1); }
+
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:13px; font-weight:600; margin-bottom:7px; }
+  .field input{
+    width:100%; height:46px; padding:0 16px; font-family:inherit; font-size:14px; color:var(--sand);
+    background:rgba(230,241,245,.06); border:1.5px solid var(--line); border-radius:12px; outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input:focus{ border-color:var(--teal); box-shadow:0 0 0 3px rgba(47,182,168,.18); }
+
+  .decision-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:6px; }
+  .decision-option{ position:relative; }
+  .decision-option input{ position:absolute; opacity:0; inset:0; cursor:pointer; margin:0; width:100%; height:100%; }
+  .decision-card{
+    border:1.5px solid var(--line); border-radius:14px; padding:16px; text-align:center;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .decision-card .ic{ font-size:22px; margin-bottom:6px; }
+  .decision-card .lbl{ font-weight:700; font-size:14px; }
+  .decision-option input:checked + .decision-card{ border-color:var(--teal); background:rgba(47,182,168,.1); }
+  .decision-option.reject input:checked + .decision-card{ border-color:var(--err); background:rgba(196,98,63,.1); }
+
+  #acceptFields{ display:none; margin-top:16px; }
+  #acceptFields.show{ display:block; }
+
+  .submit-btn{
+    width:100%; height:48px; border:none; border-radius:12px; cursor:pointer; margin-top:8px;
+    background:var(--teal); color:#062522; font-family:inherit; font-weight:700; font-size:14.5px;
+  }
+  .submit-btn:hover{ opacity:.92; }
+
+  .error-box{ background:rgba(196,98,63,.14); border:1px solid rgba(196,98,63,.4); color:#E08A68; border-radius:10px; padding:10px 14px; font-size:12.5px; margin-bottom:16px; }
+
+  .state-icon{ font-size:40px; text-align:center; margin-bottom:14px; }
+  .state-title{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:19px; text-align:center; margin-bottom:8px; }
+  .state-text{ font-size:13.5px; color:var(--muted); text-align:center; line-height:1.8; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="brand-row">
+    <img src="{{ url_for('static', filename='tvtc-logo.webp') }}" alt="شعار المؤسسة">
+    <span>College Student Portal — التدريب التعاوني</span>
+  </div>
+
+  <div class="card">
+    {% if state == 'pending' %}
+      <span class="eyebrow">خطاب تدريب تعاوني</span>
+      <h1>مراجعة طلب تدريب طالب</h1>
+
+      <div class="letter">
+        <p>تهدي كلية التقنية أطيب تحياتها لمنشأتكم الكريمة، وتطلب التكرم بالنظر في طلب تدريب الطالب/ة <b>{{ req[2] }}</b> (الرقم التدريبي: {{ req[3] }})، للمسمى الوظيفي: <b>{{ req[6] or '—' }}</b>.</p>
+      </div>
+
+      {% if req[15] %}
+        <div class="docs-box">
+          <p class="docs-title">مستندات مرفقة</p>
+          <div class="docs-row">
+            {% for doc in req[15].split(',') %}
+              {% if doc %}
+                <a class="doc-chip" href="{{ url_for('static', filename='coop_docs/' ~ doc) }}" target="_blank" rel="noopener">
+                  📎 {{ doc.split('_', 2)[2] if doc.split('_')|length == 3 else doc }}
+                </a>
+              {% endif %}
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+
+      {% if error %}<div class="error-box">{{ error }}</div>{% endif %}
+
+      <form method="POST" id="decisionForm">
+        <div class="decision-row">
+          <label class="decision-option">
+            <input type="radio" name="decision" value="accept" required>
+            <div class="decision-card"><div class="ic">✅</div><div class="lbl">قبول الطالب</div></div>
+          </label>
+          <label class="decision-option reject">
+            <input type="radio" name="decision" value="reject" required>
+            <div class="decision-card"><div class="ic">✖️</div><div class="lbl">رفض الطالب</div></div>
+          </label>
+        </div>
+
+        <div id="acceptFields">
+          <div class="field">
+            <label for="supervisor_name">اسم المشرف الميداني</label>
+            <input type="text" name="supervisor_name" id="supervisor_name" placeholder="اسم المشرف بالمنشأة">
+          </div>
+          <div class="field">
+            <label for="start_date">تاريخ بدء التدريب</label>
+            <input type="date" name="start_date" id="start_date">
+          </div>
+          <div class="field">
+            <label for="end_date">تاريخ نهاية التدريب</label>
+            <input type="date" name="end_date" id="end_date">
+          </div>
+        </div>
+
+        <button type="submit" class="submit-btn">إرسال القرار</button>
+      </form>
+
+      <script>
+        const radios = document.querySelectorAll('input[name="decision"]');
+        const acceptFields = document.getElementById('acceptFields');
+        radios.forEach(function(r){
+          r.addEventListener('change', function(){
+            acceptFields.classList.toggle('show', r.value === 'accept' && r.checked);
+          });
+        });
+        const startInput = document.getElementById('start_date');
+        const endInput = document.getElementById('end_date');
+        startInput.addEventListener('change', function(){
+          endInput.min = startInput.value || '';
+        });
+      </script>
+
+    {% elif state == 'submitted' %}
+      <div class="state-icon">{{ '✅' if decision == 'accept' else '📩' }}</div>
+      <div class="state-title">{{ 'تم تسجيل القبول، شكرًا لكم' if decision == 'accept' else 'تم تسجيل ردكم، شكرًا لكم' }}</div>
+      <p class="state-text">تم إبلاغ الكلية بقراركم مباشرة، ولا حاجة لأي إجراء إضافي من طرفكم.</p>
+
+    {% elif state == 'decided' %}
+      <div class="state-icon">ℹ️</div>
+      <div class="state-title">تم البت بهذا الطلب مسبقًا</div>
+      <p class="state-text">
+        الحالة الحالية: <b>{{ req[7] }}</b>{% if req[7] == 'تم القبول' and req[11] %} — المشرف الميداني: {{ req[11] }}{% endif %}{% if req[7] == 'تم القبول' and req[18] %} — فترة التدريب: {{ req[12] }} إلى {{ req[18] }}{% endif %}<br>
+        لو تحتاجون تعديل القرار، تواصلوا مباشرة مع منسّق التدريب التعاوني بالكلية.
+      </p>
+
+    {% elif state == 'expired' %}
+      <div class="state-icon">⏳</div>
+      <div class="state-title">انتهت صلاحية هذا الرابط</div>
+      <p class="state-text">فضلًا تواصلوا مع منسّق التدريب التعاوني بالكلية لإصدار رابط جديد.</p>
+
+    {% else %}
+      <div class="state-icon">🔒</div>
+      <div class="state-title">رابط غير صالح</div>
+      <p class="state-text">تأكدوا من نسخ الرابط كاملًا من الإيميل، أو تواصلوا مع الكلية للتأكد من صحته.</p>
+    {% endif %}
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>التدريب التعاوني | الأرشيف</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1A22; --panel:rgba(230,241,245,.05); --line:rgba(230,241,245,.14);
+    --sand:#EAF3F6; --muted:rgba(234,243,246,.6);
+    --teal:#2FB6A8; --teal-deep:#1E7F76; --amber:#D9A72A; --err:#C4623F; --ok:#2E7D5B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:
+      radial-gradient(circle at 90% -5%, rgba(47,182,168,.14), transparent 40%),
+      radial-gradient(circle at 5% 15%, rgba(47,120,168,.08), transparent 35%),
+      var(--ink);
+    color:var(--sand);
+    min-height:100vh;
+  }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 32px; position:sticky; top:0; z-index:50;
+    background:rgba(11,26,34,.75); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  }
+  .back-link{
+    color:var(--sand); text-decoration:none; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(230,241,245,.06); border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; transition:border-color .15s ease, background .15s ease;
+  }
+  .back-link svg{ width:16px; height:16px; flex-shrink:0; }
+  .back-link:hover{ border-color:var(--teal); background:rgba(230,241,245,.1); }
+  .topbar .logo{ font-family:'Tajawal', sans-serif; font-weight:700; font-size:14px; color:var(--muted); }
+
+  .content{ max-width:1180px; margin:0 auto; padding:8px 24px 70px; }
+
+  .page-head{ margin-bottom:24px; }
+  .page-head .eyebrow{ font-size:13px; color:var(--teal); font-weight:600; }
+  .page-head h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:24px; margin:8px 0 6px; }
+  .page-head p{ font-size:13.5px; color:var(--muted); line-height:1.7; max-width:44em; }
+
+  .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+  .toolbar h2{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:19px; color:var(--teal); }
+  .toolbar .sub{ font-size:13px; color:var(--muted); margin-top:4px; }
+  .search-wrap{ position:relative; width:280px; max-width:100%; }
+  .search-wrap svg{ position:absolute; top:50%; transform:translateY(-50%); right:14px; width:16px; height:16px; color:var(--muted); pointer-events:none; }
+  .search-wrap input{
+    width:100%; height:42px; padding:0 42px 0 16px; font-family:inherit; font-size:13.5px; color:var(--sand);
+    background:rgba(230,241,245,.06); border:1.5px solid var(--line); border-radius:22px; outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .search-wrap input::placeholder{ color:rgba(234,243,246,.35); }
+  .search-wrap input:focus{ border-color:var(--teal); box-shadow:0 0 0 3px rgba(47,182,168,.18); }
+
+  .tabs{
+    position:relative; display:inline-flex; flex-wrap:wrap; gap:2px; margin-bottom:18px;
+    background:rgba(230,241,245,.04); border:1.5px solid var(--line); border-radius:24px; padding:4px;
+  }
+  .tab-highlight{ position:absolute; top:4px; bottom:4px; right:4px; background:var(--teal); border-radius:20px; transition:right .32s cubic-bezier(.65,0,.35,1), width .32s cubic-bezier(.65,0,.35,1); z-index:0; }
+  .tab{ position:relative; z-index:1; font-family:inherit; font-size:13px; color:var(--muted); background:none; border:none; border-radius:20px; padding:8px 16px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:color .25s ease; }
+  .tab:hover{ color:var(--sand); }
+  .tab.active{ color:#062522; }
+  .tab.active:hover{ color:#062522; }
+  .tab-count{ font-size:10.5px; font-weight:700; min-width:18px; height:18px; padding:0 5px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; background:rgba(230,241,245,.1); color:var(--muted); transition:background .25s ease, color .25s ease; }
+  .tab.active .tab-count{ background:rgba(6,37,34,.18); color:#062522; }
+
+  .empty{ padding:50px 8px; text-align:center; color:var(--muted); font-size:14px; background:var(--panel); border:1.5px solid var(--line); border-radius:14px; }
+  .no-match{ display:none; padding:36px 8px; text-align:center; color:var(--muted); font-size:13.5px; background:var(--panel); border:1.5px dashed var(--line); border-radius:14px; }
+
+  .list{ display:flex; flex-direction:column; gap:12px; }
+  .req-card{ background:var(--panel); border:1.5px solid var(--line); border-radius:14px; padding:18px 20px; transition:border-color .15s ease; }
+  .req-card.hide{ display:none; }
+  .req-card:hover{ border-color:rgba(47,182,168,.35); }
+  .req-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  .req-student{ font-weight:600; font-size:14.5px; }
+  .req-meta{ font-size:12px; color:var(--muted); margin-top:3px; }
+  .badge{ display:inline-block; padding:4px 12px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .badge.accepted{ background:rgba(46,125,91,.18); color:#5FC393; border:1px solid rgba(46,125,91,.4); }
+  .badge.rejected{ background:rgba(196,98,63,.16); color:#E08A68; border:1px solid rgba(196,98,63,.4); }
+
+  .req-body{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); display:flex; flex-wrap:wrap; gap:22px; }
+  .req-field{ font-size:12.5px; }
+  .req-field b{ display:block; color:var(--muted); font-weight:500; font-size:11px; margin-bottom:2px; }
+
+  .docs-row{ margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; }
+  .doc-chip{
+    font-size:11.5px; color:var(--sand); text-decoration:none;
+    background:rgba(230,241,245,.06); border:1px solid var(--line); border-radius:20px;
+    padding:6px 12px; display:inline-flex; align-items:center; gap:5px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .doc-chip:hover{ border-color:var(--teal); background:rgba(47,182,168,.1); }
+
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .page-head{ animation:fadeUp .55s ease .06s both; }
+  .toolbar{ animation:fadeIn .5s ease .14s both; }
+  .req-card{ animation:fadeUp .5s ease both; animation-delay:.2s; }
+  @media (prefers-reduced-motion: reduce){ .topbar, .page-head, .toolbar, .req-card{ animation:none !important; } }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a class="back-link" href="{{ url_for('coop_dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع لطلبات التدريب</a>
+    <span class="logo">College Student Portal</span>
+  </div>
+
+  <main class="content">
+    <div class="page-head">
+      <span class="eyebrow">التدريب التعاوني</span>
+      <h1>أرشيف الطلبات المقفولة</h1>
+      <p>الطلبات اللي انبتّ فيها (قبول أو رفض) وفعليًا اختفت من لوحة المتابعة الرئيسية بعد 24 ساعة من القرار. للعرض فقط.</p>
+    </div>
+
+    {% if requests %}
+      {% set c_stats = namespace(accepted=0, rejected=0, college_rejected=0) %}
+      {% for r in requests %}
+        {% if r[7] == 'تم القبول' %}{% set c_stats.accepted = c_stats.accepted + 1 %}
+        {% elif r[7] == 'مرفوض من الكلية' %}{% set c_stats.college_rejected = c_stats.college_rejected + 1 %}
+        {% else %}{% set c_stats.rejected = c_stats.rejected + 1 %}{% endif %}
+      {% endfor %}
+
+      <div class="toolbar">
+        <div>
+          <h2>كل الطلبات المؤرشفة</h2>
+          <p class="sub">{{ requests|length }} طلب</p>
+        </div>
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input type="text" id="reqSearch" placeholder="ابحث بالطالب أو المنشأة...">
+        </div>
+      </div>
+
+      <div class="tabs" id="tabsWrap">
+        <span class="tab-highlight" id="tabHighlight"></span>
+        <button class="tab active" data-filter="all">الكل <span class="tab-count">{{ requests|length }}</span></button>
+        <button class="tab" data-filter="accepted">تم القبول <span class="tab-count">{{ c_stats.accepted }}</span></button>
+        <button class="tab" data-filter="rejected">مرفوض من المنشأة <span class="tab-count">{{ c_stats.rejected }}</span></button>
+        <button class="tab" data-filter="college_rejected">مرفوض من الكلية <span class="tab-count">{{ c_stats.college_rejected }}</span></button>
+      </div>
+
+      <div class="list" id="reqList">
+        {% for r in requests %}
+          {% set st = 'accepted' if r[7] == 'تم القبول' else ('college_rejected' if r[7] == 'مرفوض من الكلية' else 'rejected') %}
+          <div class="req-card" data-status="{{ st }}" data-search="{{ (r[2] ~ ' ' ~ r[4])|lower }}">
+            <div class="req-top">
+              <div>
+                <div class="req-student">{{ r[2] }} <span style="color:var(--muted); font-weight:400; font-size:12px;">#{{ r[0] }}</span></div>
+                <div class="req-meta">{{ r[3] }}{% if r[4] %} — {{ r[4] }}{% endif %}{% if r[6] %} · {{ r[6] }}{% endif %}</div>
+              </div>
+              {% if st == 'accepted' %}<span class="badge accepted">✓ تم القبول</span>
+              {% elif st == 'college_rejected' %}<span class="badge rejected">مرفوض من الكلية</span>
+              {% else %}<span class="badge rejected">مرفوض</span>{% endif %}
+            </div>
+            <div class="req-body">
+              {% if st == 'college_rejected' %}
+                <div class="req-field"><b>تاريخ الطلب</b>{{ r[10] }}</div>
+                <div class="req-field"><b>تاريخ الرفض</b>{{ r[13] }}</div>
+                <div class="req-field"><b>سبب الرفض</b>{{ r[17] or '—' }}</div>
+              {% else %}
+                <div class="req-field"><b>إيميل المنشأة</b>{{ r[5] or '—' }}</div>
+                <div class="req-field"><b>تاريخ الإصدار</b>{{ r[10] }}</div>
+                {% if st == 'accepted' %}
+                  <div class="req-field"><b>المشرف الميداني</b>{{ r[11] or '—' }}</div>
+                  <div class="req-field"><b>تاريخ بدء التدريب</b>{{ r[12] or '—' }}</div>
+                  <div class="req-field"><b>تاريخ نهاية التدريب</b>{{ r[18] or '—' }}</div>
+                  {% if r[20] %}<div class="req-field"><b>حالة شهادة الإتمام</b>{{ r[20] }}</div>{% endif %}
+                {% endif %}
+                <div class="req-field"><b>تاريخ القرار</b>{{ r[13] }}</div>
+              {% endif %}
+            </div>
+            {% if r[15] %}
+              <div class="docs-row">
+                {% for doc in r[15].split(',') %}
+                  {% if doc %}
+                    <a class="doc-chip" href="{{ url_for('static', filename='coop_docs/' ~ doc) }}" target="_blank" rel="noopener">
+                      📎 {{ doc.split('_', 2)[2] if doc.split('_')|length == 3 else doc }}
+                    </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+            {% if r[24] %}
+              <div class="docs-row">
+                <a class="doc-chip" href="{{ url_for('static', filename='coop_docs/' ~ r[24]) }}" target="_blank" rel="noopener">
+                  🎓 {{ r[24].split('_', 2)[2] if r[24].split('_')|length == 3 else r[24] }}
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="no-match" id="noMatch">ما فيه طلب مطابق للبحث.</div>
+    {% else %}
+      <div class="empty">ما فيه طلبات مؤرشفة بعد.</div>
+    {% endif %}
+  </main>
+
+  <script>
+    const cards = Array.from(document.querySelectorAll('.req-card'));
+    const noMatch = document.getElementById('noMatch');
+    const searchInput = document.getElementById('reqSearch');
+    const tabsWrap = document.getElementById('tabsWrap');
+    const highlight = document.getElementById('tabHighlight');
+    const tabs = document.querySelectorAll('.tab');
+    let activeFilter = 'all';
+
+    function moveHighlight(tab, skip){
+      if (!tabsWrap || !highlight || !tab) return;
+      if (skip) highlight.style.transition = 'none';
+      const wrapRect = tabsWrap.getBoundingClientRect();
+      const tabRect = tab.getBoundingClientRect();
+      highlight.style.right = (wrapRect.right - tabRect.right) + 'px';
+      highlight.style.width = tabRect.width + 'px';
+      if (skip) requestAnimationFrame(function(){ highlight.style.transition = ''; });
+    }
+
+    function applyFilters(){
+      const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+      let visible = 0;
+      cards.forEach(function(card){
+        const match = card.dataset.search.includes(q) && (activeFilter === 'all' || card.dataset.status === activeFilter);
+        card.classList.toggle('hide', !match);
+        if (match) visible++;
+      });
+      if (noMatch) noMatch.style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    tabs.forEach(function(tab){
+      tab.addEventListener('click', function(){
+        tabs.forEach(function(t){ t.classList.remove('active'); });
+        tab.classList.add('active');
+        moveHighlight(tab);
+        activeFilter = tab.dataset.filter;
+        applyFilters();
+      });
+    });
+    const initialActive = document.querySelector('.tab.active');
+    if (initialActive) moveHighlight(initialActive, true);
+    window.addEventListener('resize', function(){
+      const active = document.querySelector('.tab.active');
+      if (active) moveHighlight(active, true);
+    });
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>التدريب التعاوني | لوحة المتابعة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1A22; --panel:rgba(230,241,245,.05); --line:rgba(230,241,245,.14);
+    --sand:#EAF3F6; --muted:rgba(234,243,246,.6);
+    --teal:#2FB6A8; --teal-deep:#1E7F76; --amber:#D9A72A; --err:#C4623F; --ok:#2E7D5B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:
+      radial-gradient(circle at 90% -5%, rgba(47,182,168,.14), transparent 40%),
+      radial-gradient(circle at 5% 15%, rgba(47,120,168,.08), transparent 35%),
+      var(--ink);
+    color:var(--sand);
+    min-height:100vh;
+  }
+
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:20px 32px; position:sticky; top:0; z-index:50;
+    background:rgba(11,26,34,.75); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  }
+  .back-link{
+    color:var(--sand); text-decoration:none; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(230,241,245,.06); border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; transition:border-color .15s ease, background .15s ease;
+  }
+  .back-link svg{ width:16px; height:16px; flex-shrink:0; }
+  .back-link:hover{ border-color:var(--teal); background:rgba(230,241,245,.1); }
+  .topbar .logo{ font-family:'Tajawal', sans-serif; font-weight:700; font-size:14px; color:var(--muted); }
+
+  .content{ max-width:1180px; margin:0 auto; padding:8px 24px 70px; }
+
+  .hero{
+    position:relative; overflow:hidden;
+    display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;
+    background:linear-gradient(150deg, var(--ink) 0%, #113039 55%, #0C2229 100%);
+    border-radius:22px; padding:34px 40px; margin-bottom:28px;
+    box-shadow:0 20px 45px rgba(0,0,0,.32);
+  }
+  .hero-blob{
+    position:absolute; left:-8%; bottom:-30%; width:40%; aspect-ratio:1; border-radius:50%;
+    background:radial-gradient(circle at 40% 40%, rgba(47,182,168,.32), transparent 70%);
+    filter:blur(8px); pointer-events:none;
+  }
+  .hero-text{ position:relative; z-index:1; }
+  .hero-text .eyebrow{ font-size:13px; color:var(--teal); font-weight:600; }
+  .hero-text h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:26px; margin:8px 0 6px; }
+  .hero-text p{ font-size:14px; color:var(--muted); max-width:36em; line-height:1.7; }
+  .hero-cta{
+    position:relative; z-index:1; flex-shrink:0;
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--teal); color:#062522; font-weight:700; font-size:14px;
+    text-decoration:none; border-radius:14px; padding:13px 22px;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .hero-cta:hover{ transform:translateY(-2px); box-shadow:0 10px 24px rgba(47,182,168,.3); }
+  .hero-cta svg{ width:18px; height:18px; }
+
+  .stats-row{ display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:14px; margin-bottom:28px; }
+  .stat-card{
+    background:var(--panel); border:1.5px solid var(--line); border-radius:14px;
+    padding:18px 20px; display:flex; align-items:center; gap:14px;
+    transition:border-color .15s ease, transform .15s ease;
+  }
+  .stat-card:hover{ border-color:rgba(47,182,168,.4); transform:translateY(-2px); }
+  .stat-icon{ width:42px; height:42px; border-radius:11px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .stat-icon svg{ width:20px; height:20px; }
+  .stat-icon.c-total{ background:rgba(47,182,168,.14); color:var(--teal); }
+  .stat-icon.c-pending{ background:rgba(217,167,42,.16); color:var(--amber); }
+  .stat-icon.c-accepted{ background:rgba(46,125,91,.18); color:#5FC393; }
+  .stat-icon.c-awaiting{ background:rgba(47,120,168,.2); color:#7DBDEB; }
+  .stat-icon.c-rejected{ background:rgba(196,98,63,.16); color:#E08A68; }
+  .stat-num{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:22px; line-height:1.1; }
+  .stat-label{ font-size:12px; color:var(--muted); margin-top:3px; }
+  @media (max-width: 900px){ .stats-row{ grid-template-columns:repeat(2, 1fr); } }
+
+  .toolbar{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:18px; flex-wrap:wrap; }
+  .toolbar h2{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:19px; color:var(--teal); }
+  .toolbar .sub{ font-size:13px; color:var(--muted); margin-top:4px; }
+  .search-wrap{ position:relative; width:280px; max-width:100%; }
+  .search-wrap svg{ position:absolute; top:50%; transform:translateY(-50%); right:14px; width:16px; height:16px; color:var(--muted); pointer-events:none; }
+  .search-wrap input{
+    width:100%; height:42px; padding:0 42px 0 16px; font-family:inherit; font-size:13.5px; color:var(--sand);
+    background:rgba(230,241,245,.06); border:1.5px solid var(--line); border-radius:22px; outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .search-wrap input::placeholder{ color:rgba(234,243,246,.35); }
+  .search-wrap input:focus{ border-color:var(--teal); box-shadow:0 0 0 3px rgba(47,182,168,.18); }
+
+  .tabs{
+    position:relative; display:inline-flex; flex-wrap:wrap; gap:2px; margin-bottom:18px;
+    background:rgba(230,241,245,.04); border:1.5px solid var(--line); border-radius:24px; padding:4px;
+  }
+  .tab-highlight{ position:absolute; top:4px; bottom:4px; right:4px; background:var(--teal); border-radius:20px; transition:right .32s cubic-bezier(.65,0,.35,1), width .32s cubic-bezier(.65,0,.35,1); z-index:0; }
+  .tab{ position:relative; z-index:1; font-family:inherit; font-size:13px; color:var(--muted); background:none; border:none; border-radius:20px; padding:8px 16px; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:color .25s ease; }
+  .tab:hover{ color:var(--sand); }
+  .tab.active{ color:#062522; }
+  .tab.active:hover{ color:#062522; }
+  .tab-count{ font-size:10.5px; font-weight:700; min-width:18px; height:18px; padding:0 5px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; background:rgba(230,241,245,.1); color:var(--muted); transition:background .25s ease, color .25s ease; }
+  .tab.active .tab-count{ background:rgba(6,37,34,.18); color:#062522; }
+
+  .empty{ padding:50px 8px; text-align:center; color:var(--muted); font-size:14px; background:var(--panel); border:1.5px solid var(--line); border-radius:14px; }
+  .no-match{ display:none; padding:36px 8px; text-align:center; color:var(--muted); font-size:13.5px; background:var(--panel); border:1.5px dashed var(--line); border-radius:14px; }
+
+  .list{ display:flex; flex-direction:column; gap:12px; }
+  .req-card{ background:var(--panel); border:1.5px solid var(--line); border-radius:14px; padding:18px 20px; transition:border-color .15s ease; }
+  .req-card.hide{ display:none; }
+  .req-card:hover{ border-color:rgba(47,182,168,.35); }
+  .req-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  .req-student{ font-weight:600; font-size:14.5px; }
+  .req-meta{ font-size:12px; color:var(--muted); margin-top:3px; }
+  .badge{ display:inline-block; padding:4px 12px; border-radius:20px; font-size:10.5px; font-weight:700; white-space:nowrap; }
+  .badge.pending{ background:rgba(217,167,42,.18); color:var(--amber); border:1px solid rgba(217,167,42,.4); }
+  .badge.accepted{ background:rgba(46,125,91,.18); color:#5FC393; border:1px solid rgba(46,125,91,.4); }
+  .badge.rejected{ background:rgba(196,98,63,.16); color:#E08A68; border:1px solid rgba(196,98,63,.4); }
+
+  .req-body{ margin-top:12px; padding-top:12px; border-top:1px dashed var(--line); display:flex; flex-wrap:wrap; gap:22px; }
+  .req-field{ font-size:12.5px; }
+  .req-field b{ display:block; color:var(--muted); font-weight:500; font-size:11px; margin-bottom:2px; }
+
+  .link-row{ margin-top:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .link-box{
+    flex:1; min-width:200px; font-family:monospace; font-size:11.5px; color:var(--muted);
+    background:rgba(0,0,0,.2); border:1px solid var(--line); border-radius:8px; padding:8px 12px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .copy-btn{
+    font-family:inherit; font-size:12px; font-weight:600; color:#062522; background:var(--teal);
+    border:none; border-radius:8px; padding:8px 14px; cursor:pointer; flex-shrink:0;
+    transition:opacity .15s ease;
+  }
+  .copy-btn:hover{ opacity:.88; }
+  .copy-btn.copied{ background:#5FC393; }
+
+  .docs-row{ margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; }
+  .doc-chip{
+    font-size:11.5px; color:var(--sand); text-decoration:none;
+    background:rgba(230,241,245,.06); border:1px solid var(--line); border-radius:20px;
+    padding:6px 12px; display:inline-flex; align-items:center; gap:5px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .doc-chip:hover{ border-color:var(--teal); background:rgba(47,182,168,.1); }
+
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .hero{ animation:fadeUp .55s ease .06s both; }
+  .stats-row{ animation:fadeIn .5s ease .14s both; }
+  .toolbar{ animation:fadeIn .5s ease .2s both; }
+  .req-card{ animation:fadeUp .5s ease both; animation-delay:.26s; }
+  @media (prefers-reduced-motion: reduce){ .topbar, .hero, .stats-row, .toolbar, .req-card{ animation:none !important; } }
+
+  .badge.awaiting{ background:rgba(47,120,168,.18); color:#7DBDEB; border:1px solid rgba(47,120,168,.45); }
+  .act-row{ margin-top:14px; display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+  .act-btn{
+    font-family:inherit; font-size:12.5px; font-weight:700; color:#062522; background:var(--teal);
+    border:none; border-radius:8px; padding:9px 16px; cursor:pointer; text-decoration:none; display:inline-block;
+    transition:opacity .15s ease;
+  }
+  .act-btn:hover{ opacity:.88; }
+  .act-btn.danger{ background:rgba(196,98,63,.18); color:#F0A98E; border:1px solid rgba(196,98,63,.45); }
+  .reject-box summary{
+    list-style:none; cursor:pointer; font-size:12.5px; font-weight:600; color:#E08A68;
+    border:1px solid rgba(196,98,63,.4); border-radius:8px; padding:9px 16px; display:inline-block;
+  }
+  .reject-box summary::-webkit-details-marker{ display:none; }
+  .reject-box summary:hover{ background:rgba(196,98,63,.1); }
+  .reject-box[open] summary{ margin-bottom:10px; }
+  .reject-box form{ display:flex; gap:8px; flex-wrap:wrap; }
+  .reject-box input{
+    font-family:inherit; font-size:12.5px; color:var(--sand); background:rgba(0,0,0,.2);
+    border:1px solid var(--line); border-radius:8px; padding:9px 12px; min-width:260px; outline:none;
+  }
+  .reject-box input:focus{ border-color:#E08A68; }
+</style>
+</head>
+<body>
+
+  {% set c_stats = namespace(total=0, awaiting=0, pending=0, accepted=0, rejected=0) %}
+  {% for r in requests %}
+    {% set c_stats.total = c_stats.total + 1 %}
+    {% if r[7] == 'بانتظار إصدار الخطاب' %}{% set c_stats.awaiting = c_stats.awaiting + 1 %}
+    {% elif r[7] == 'قيد المراجعة عند المنشأة' %}{% set c_stats.pending = c_stats.pending + 1 %}
+    {% elif r[7] == 'تم القبول' %}{% set c_stats.accepted = c_stats.accepted + 1 %}
+    {% elif r[7] in ('مرفوض', 'مرفوض من الكلية') %}{% set c_stats.rejected = c_stats.rejected + 1 %}{% endif %}
+  {% endfor %}
+
+  <div class="topbar">
+    <a class="back-link" href="{{ url_for('it_dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
+    <span class="logo">College Student Portal</span>
+  </div>
+
+  <main class="content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div style="margin-bottom:18px; padding:12px 16px; border-radius:12px; font-size:13px; line-height:1.7; word-break:break-all; background:{{ 'rgba(46,125,91,.14)' if category == 'success' else 'rgba(217,167,42,.12)' }}; border:1px solid {{ 'rgba(46,125,91,.4)' if category == 'success' else 'rgba(217,167,42,.35)' }}; color:{{ '#8FE3B8' if category == 'success' else '#E8C97A' }};">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <section class="hero">
+      <div class="hero-blob"></div>
+      <div class="hero-text">
+        <span class="eyebrow">التدريب التعاوني</span>
+        <h1>متابعة طلبات التدريب</h1>
+        <p>راجع طلبات الطلاب وأصدر خطاب التدريب للمنشأة اللي حددوها (أو أصدر خطابًا مباشرة لطالب)، وتابع قرارها (قبول أو رفض) لحظة بلحظة عبر رابط آمن بدون ما تحتاج المنشأة تنشئ حساب.</p>
+      </div>
+      <a class="hero-cta" href="{{ url_for('coop_new_request') }}">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 5V19M5 12H19" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        طلب خطاب جديد
+      </a>
+    </section>
+
+    <a href="{{ url_for('coop_archive') }}" style="display:flex; align-items:center; justify-content:space-between; gap:12px; background:var(--panel); border:1.5px solid var(--line); border-radius:14px; padding:14px 20px; margin-bottom:20px; text-decoration:none; color:var(--sand); transition:border-color .15s ease;" onmouseover="this.style.borderColor='var(--teal)'" onmouseout="this.style.borderColor='var(--line)'">
+      <span style="display:flex; align-items:center; gap:10px; font-size:13.5px; font-weight:600;">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:18px;height:18px;flex-shrink:0;"><path d="M3 7H21V19C21 19.5523 20.5523 20 20 20H4C3.44772 20 3 19.5523 3 19V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 7L5 4H19L21 7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 11H14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        أرشيف طلبات التدريب — {{ archive_count }} طلب مقفول
+      </span>
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:16px;height:16px;flex-shrink:0;"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon c-total"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6H20M4 12H20M4 18H14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <div><div class="stat-num">{{ c_stats.total }}</div><div class="stat-label">إجمالي الطلبات</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon c-awaiting"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 4H20V16H8L4 20V4Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8 9H16M8 12H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <div><div class="stat-num">{{ c_stats.awaiting }}</div><div class="stat-label">طلبات جديدة بانتظار الإصدار</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon c-pending"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="2"/><path d="M12 7.5V12L15 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><div class="stat-num">{{ c_stats.pending }}</div><div class="stat-label">قيد المراجعة عند المنشأة</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon c-accepted"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div><div class="stat-num">{{ c_stats.accepted }}</div><div class="stat-label">تم القبول</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon c-rejected"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 6L18 18M6 18L18 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div>
+        <div><div class="stat-num">{{ c_stats.rejected }}</div><div class="stat-label">مرفوض</div></div>
+      </div>
+    </div>
+
+    {% if requests %}
+      <div class="toolbar">
+        <div>
+          <h2>كل الطلبات</h2>
+          <p class="sub">{{ requests|length }} طلب — اضغط لنسخ رابط أي منشأة وإرساله</p>
+        </div>
+        <div class="search-wrap">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M21 21L16.65 16.65" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <input type="text" id="reqSearch" placeholder="ابحث بالطالب أو المنشأة...">
+        </div>
+      </div>
+
+      <div class="tabs" id="tabsWrap">
+        <span class="tab-highlight" id="tabHighlight"></span>
+        <button class="tab active" data-filter="all">الكل <span class="tab-count">{{ c_stats.total }}</span></button>
+        <button class="tab" data-filter="awaiting">بانتظار الإصدار <span class="tab-count">{{ c_stats.awaiting }}</span></button>
+        <button class="tab" data-filter="pending">قيد المراجعة <span class="tab-count">{{ c_stats.pending }}</span></button>
+        <button class="tab" data-filter="accepted">تم القبول <span class="tab-count">{{ c_stats.accepted }}</span></button>
+        <button class="tab" data-filter="rejected">مرفوض <span class="tab-count">{{ c_stats.rejected }}</span></button>
+      </div>
+
+      <div class="list" id="reqList">
+        {% for r in requests %}
+          {% set st = 'accepted' if r[7] == 'تم القبول' else ('rejected' if r[7] in ('مرفوض', 'مرفوض من الكلية') else ('awaiting' if r[7] == 'بانتظار إصدار الخطاب' else 'pending')) %}
+          <div class="req-card" data-status="{{ st }}" data-search="{{ (r[2] ~ ' ' ~ r[4])|lower }}">
+            <div class="req-top">
+              <div>
+                <div class="req-student">{{ r[2] }} <span style="color:var(--muted); font-weight:400; font-size:12px;">#{{ r[0] }}</span></div>
+                <div class="req-meta">{{ r[3] }} — {{ r[4] }}{% if r[6] %} · {{ r[6] }}{% endif %}</div>
+              </div>
+              {% if st == 'awaiting' %}<span class="badge awaiting">طلب جديد</span>
+              {% elif st == 'pending' %}<span class="badge pending">قيد المراجعة</span>
+              {% elif st == 'accepted' %}<span class="badge accepted">✓ تم القبول</span>
+              {% elif r[7] == 'مرفوض من الكلية' %}<span class="badge rejected">مرفوض من الكلية</span>
+              {% else %}<span class="badge rejected">مرفوض</span>{% endif %}
+              {% if st == 'accepted' and r[20] == 'قيد المراجعة' %}<span class="badge pending">📄 شهادة بانتظار المراجعة</span>{% endif %}
+            </div>
+            <div class="req-body">
+              {% if st == 'awaiting' %}
+                <div class="req-field"><b>إيميل المنشأة</b>{{ r[5] or 'لم يحدده الطالب' }}</div>
+                <div class="req-field"><b>تاريخ الطلب</b>{{ r[10] }}</div>
+                {% if r[16] %}<div class="req-field"><b>ملاحظات الطالب</b>{{ r[16] }}</div>{% endif %}
+              {% elif r[7] == 'مرفوض من الكلية' %}
+                <div class="req-field"><b>تاريخ الطلب</b>{{ r[10] }}</div>
+                <div class="req-field"><b>تاريخ الرفض</b>{{ r[13] }}</div>
+                <div class="req-field"><b>سبب الرفض</b>{{ r[17] or '—' }}</div>
+              {% else %}
+                <div class="req-field"><b>إيميل المنشأة</b>{{ r[5] or '—' }}</div>
+                <div class="req-field"><b>تاريخ الإصدار</b>{{ r[10] }}</div>
+                {% if st == 'pending' %}
+                  <div class="req-field"><b>صلاحية الرابط حتى</b>{{ r[9] }}</div>
+                {% else %}
+                  <div class="req-field"><b>المشرف الميداني</b>{{ r[11] or '—' }}</div>
+                  <div class="req-field"><b>تاريخ بدء التدريب</b>{{ r[12] or '—' }}</div>
+                  <div class="req-field"><b>تاريخ نهاية التدريب</b>{{ r[18] or '—' }}</div>
+                  <div class="req-field"><b>تاريخ القرار</b>{{ r[13] }}</div>
+                  {% if r[20] %}<div class="req-field"><b>حالة شهادة الإتمام</b>{{ r[20] }}</div>{% endif %}
+                {% endif %}
+              {% endif %}
+            </div>
+            {% if st == 'awaiting' %}
+              <div class="act-row">
+                <a class="act-btn" href="{{ url_for('coop_issue_letter', req_id=r[0]) }}">إصدار الخطاب</a>
+                <details class="reject-box">
+                  <summary>رفض الطلب</summary>
+                  <form method="POST" action="{{ url_for('coop_college_reject', req_id=r[0]) }}">
+                    <input type="text" name="reason" maxlength="300" placeholder="سبب الرفض (يظهر للطالب)" required>
+                    <button type="submit" class="act-btn danger">تأكيد الرفض</button>
+                  </form>
+                </details>
+              </div>
+            {% elif st == 'pending' %}
+              <div class="link-row">
+                <span class="link-box" id="link-{{ r[0] }}">{{ url_for('coop_verify', token=r[8], _external=True) }}</span>
+                <button class="copy-btn" data-copy-target="link-{{ r[0] }}" type="button">نسخ رابط المنشأة</button>
+              </div>
+            {% elif st == 'accepted' and r[20] == 'قيد المراجعة' %}
+              <div class="act-row">
+                <a class="act-btn" href="{{ url_for('static', filename='coop_docs/' ~ r[19]) }}" target="_blank" rel="noopener">عرض شهادة الإتمام</a>
+                <details class="reject-box">
+                  <summary>اعتماد / رفض الشهادة</summary>
+                  <form method="POST" action="{{ url_for('coop_review_completion', req_id=r[0]) }}" enctype="multipart/form-data" style="flex-direction:column; align-items:stretch; margin-bottom:8px;">
+                    <input type="hidden" name="decision" value="approve">
+                    <label style="font-size:12px; color:var(--muted);">إرفاق شهادة الطالب</label>
+                    <input type="file" name="final_certificate" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                    <button type="submit" class="act-btn">اعتماد الشهادة</button>
+                  </form>
+                  <form method="POST" action="{{ url_for('coop_review_completion', req_id=r[0]) }}">
+                    <input type="hidden" name="decision" value="reject">
+                    <input type="text" name="reason" maxlength="300" placeholder="سبب رفض الشهادة (يظهر للطالب)" required>
+                    <button type="submit" class="act-btn danger">رفض الشهادة</button>
+                  </form>
+                </details>
+              </div>
+            {% endif %}
+            {% if r[15] %}
+              <div class="docs-row">
+                {% for doc in r[15].split(',') %}
+                  {% if doc %}
+                    <a class="doc-chip" href="{{ url_for('static', filename='coop_docs/' ~ doc) }}" target="_blank" rel="noopener">
+                      📎 {{ doc.split('_', 2)[2] if doc.split('_')|length == 3 else doc }}
+                    </a>
+                  {% endif %}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+
+      <div class="no-match" id="noMatch">ما فيه طلب مطابق للبحث.</div>
+    {% else %}
+      <div class="empty">ما فيه طلبات تدريب بعد. اضغط "طلب خطاب جديد" عشان تبدأ.</div>
+    {% endif %}
+  </main>
+
+  <script>
+    const cards = Array.from(document.querySelectorAll('.req-card'));
+    const noMatch = document.getElementById('noMatch');
+    const searchInput = document.getElementById('reqSearch');
+    const tabsWrap = document.getElementById('tabsWrap');
+    const highlight = document.getElementById('tabHighlight');
+    const tabs = document.querySelectorAll('.tab');
+    let activeFilter = 'all';
+
+    function moveHighlight(tab, skip){
+      if (!tabsWrap || !highlight || !tab) return;
+      if (skip) highlight.style.transition = 'none';
+      const wrapRect = tabsWrap.getBoundingClientRect();
+      const tabRect = tab.getBoundingClientRect();
+      highlight.style.right = (wrapRect.right - tabRect.right) + 'px';
+      highlight.style.width = tabRect.width + 'px';
+      if (skip) requestAnimationFrame(function(){ highlight.style.transition = ''; });
+    }
+
+    function applyFilters(){
+      const q = searchInput ? searchInput.value.trim().toLowerCase() : '';
+      let visible = 0;
+      cards.forEach(function(card){
+        const match = card.dataset.search.includes(q) && (activeFilter === 'all' || card.dataset.status === activeFilter);
+        card.classList.toggle('hide', !match);
+        if (match) visible++;
+      });
+      if (noMatch) noMatch.style.display = visible === 0 ? 'block' : 'none';
+    }
+
+    if (searchInput) searchInput.addEventListener('input', applyFilters);
+    tabs.forEach(function(tab){
+      tab.addEventListener('click', function(){
+        tabs.forEach(function(t){ t.classList.remove('active'); });
+        tab.classList.add('active');
+        moveHighlight(tab);
+        activeFilter = tab.dataset.filter;
+        applyFilters();
+      });
+    });
+    const initialActive = document.querySelector('.tab.active');
+    if (initialActive) moveHighlight(initialActive, true);
+    window.addEventListener('resize', function(){
+      const active = document.querySelector('.tab.active');
+      if (active) moveHighlight(active, true);
+    });
+
+    document.querySelectorAll('.copy-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const target = document.getElementById(btn.dataset.copyTarget);
+        if (!target) return;
+        navigator.clipboard.writeText(target.textContent.trim()).then(function(){
+          const original = btn.textContent;
+          btn.textContent = 'تم النسخ ✓';
+          btn.classList.add('copied');
+          setTimeout(function(){ btn.textContent = original; btn.classList.remove('copied'); }, 1800);
+        });
+      });
+    });
+  </script>
+
+</body>
+</html>

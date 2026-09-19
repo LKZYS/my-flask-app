@@ -1,8 +1,10 @@
 import csv
 import hashlib
 import os
+import secrets
 from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 app.secret_key = "change-this-secret-key"  # مهم تغيّرها لاحقًا
@@ -10,10 +12,28 @@ app.secret_key = "change-this-secret-key"  # مهم تغيّرها لاحقًا
 IT_STAFF_CODE = "IT-2026"  # الرمز السري لإنشاء حساب فريق الدعم الفني — غيّره لرمز خاص فيك
 
 STATS_RESET_AFTER = timedelta(days=30)  # نافذة إنجاز الموظف الفني (بلاغات حلّها) — متحركة يوم بيوم، مو رتست ثابت أول الشهر
+TRAINING_LINK_VALID_DAYS = 14  # صلاحية رابط المنشأة (قبول/رفض أو تقييم) بالأيام
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USERS_FILE = os.path.join(BASE_DIR, "users.csv")
 TICKETS_FILE = os.path.join(BASE_DIR, "tickets.csv")
+TRAINING_FILE = os.path.join(BASE_DIR, "training_requests.csv")
+
+TRAINING_DOCS_DIR = os.path.join(BASE_DIR, "static", "coop_docs")
+ALLOWED_DOC_EXT = {"pdf", "doc", "docx", "jpg", "jpeg", "png"}
+MAX_DOC_SIZE = 8 * 1024 * 1024  # 8 ميجابايت لكل ملف
+MAX_DOC_FILES = 5  # أقصى عدد مستندات لكل طلب تدريب
+
+STATUS_AWAITING = "بانتظار إصدار الخطاب"        # الطالب قدّم الطلب والكلية ما أصدرت الخطاب بعد
+STATUS_COMPANY_PENDING = "قيد المراجعة عند المنشأة"  # الخطاب صدر والرابط عند المنشأة
+STATUS_COLLEGE_REJECTED = "مرفوض من الكلية"      # الكلية رفضت طلب الطالب قبل إصدار الخطاب
+CLOSED_TRAINING_STATUSES = ("تم القبول", "مرفوض", STATUS_COLLEGE_REJECTED)  # حالات مقفولة (قرار نهائي)
+TRAINING_HIDE_AFTER = timedelta(hours=24)  # مدة بقاء الطلب المقفول ظاهرًا قبل ما يختفي وينتقل للأرشيف (يبقى محفوظًا بالملف)
+MAX_OPEN_STUDENT_REQUESTS = 3  # أقصى عدد طلبات "بانتظار الإصدار" لنفس الطالب بنفس الوقت
+
+COMPLETION_PENDING = "قيد المراجعة"    # الطالب رفع شهادة إتمام وبانتظار مراجعة الكلية لها
+COMPLETION_APPROVED = "معتمدة"        # الكلية اعتمدت إتمام التدريب
+COMPLETION_REJECTED = "مرفوضة"        # الكلية رفضت الشهادة المرفوعة، والطالب يقدر يعيد الرفع
 
 AVATAR_DIR = os.path.join(BASE_DIR, "static", "avatars")
 ALLOWED_AVATAR_EXT = {"png", "jpg", "jpeg", "webp", "gif"}
@@ -91,6 +111,7 @@ def fix_duplicate_ticket_ids():
 
 def init_file():
     os.makedirs(AVATAR_DIR, exist_ok=True)
+    os.makedirs(TRAINING_DOCS_DIR, exist_ok=True)
 
     if not os.path.exists(USERS_FILE):
         with open(USERS_FILE, "w", newline="", encoding="utf-8") as f:
@@ -101,6 +122,20 @@ def init_file():
         with open(TICKETS_FILE, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["id", "email", "title", "description", "status", "created_at", "edited", "resolved_at", "handled_by"])  # صف العناوين
+
+    if not os.path.exists(TRAINING_FILE):
+        with open(TRAINING_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "id", "student_email", "student_name", "training_number",
+                "company_name", "company_email", "position_title",
+                "status", "token", "token_expires_at", "created_at",
+                "supervisor_name", "start_date", "decided_at", "issued_by",
+                "documents", "student_notes", "college_reject_reason",
+                "end_date",
+                "completion_doc", "completion_status", "completion_submitted_at",
+                "completion_reviewed_at", "completion_reject_reason", "final_certificate_doc",
+            ])  # صف العناوين
 
     fix_duplicate_ticket_ids()  # ينظّف أي تكرار قديم بالأرقام عند تشغيل التطبيق
 
@@ -547,6 +582,8 @@ def it_dashboard():
     avg_resolution_time = get_avg_resolution_time()
     today_ticket_count = get_today_ticket_count()
     top_staff = get_top_staff_this_month()
+    coop_new_count = sum(1 for r in get_all_training_requests() if r[7] == STATUS_AWAITING)
+    coop_archive_count = len(get_archived_training_requests())
     return render_template(
         "it_dashboard.html",
         user=session["user"],
@@ -559,6 +596,8 @@ def it_dashboard():
         today_ticket_count=today_ticket_count,
         top_staff_name=top_staff[0] if top_staff else None,
         top_staff_count=top_staff[1] if top_staff else 0,
+        coop_new_count=coop_new_count,
+        coop_archive_count=coop_archive_count,
     )
 
 
@@ -610,6 +649,309 @@ def it_archive():
         students=students,
         staff_names=staff_names,
     )
+
+
+def get_all_students():
+    """يرجع كل حسابات الطلاب (الاسم، الإيميل، الرقم التدريبي) لعرضهم بنموذج إصدار خطاب تدريب."""
+    students = []
+    with open(USERS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            if len(row) >= 5 and row[4] == "student":
+                students.append({
+                    "full_name": row[0],
+                    "email": row[2],
+                    "training_number": row[5] if len(row) > 5 else "",
+                })
+    return students
+
+
+@app.route("/coop")
+def coop_dashboard():
+    """لوحة التدريب التعاوني — يديرها فريق الدعم الفني بنفس حسابهم الحالي.
+    تعرض كل طلبات التدريب وحالتها (قيد المراجعة عند المنشأة / مقبول / مرفوض)."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+    requests_list = get_visible_training_requests()
+    requests_list.sort(key=lambda r: r[7] != STATUS_AWAITING)  # الطلبات الجديدة فوق (الترتيب الداخلي يبقى الأحدث أولًا)
+    return render_template(
+        "coop_dashboard.html",
+        user=session["user"],
+        requests=requests_list,
+        archive_count=len(get_archived_training_requests()),
+    )
+
+
+@app.route("/coop/archive")
+def coop_archive():
+    """أرشيف طلبات التدريب المقفولة (قبول/رفض) اللي مرّ على قرارها أكثر من 24 ساعة وفعليًا
+    اختفت من لوحة المتابعة الرئيسية — ما فيه تكرار بين اللوحتين. الطلبات هنا للعرض فقط، ما فيه تعديل على حالتها."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+    requests_list = get_archived_training_requests()
+    return render_template(
+        "coop_archive.html",
+        user=session["user"],
+        requests=requests_list,
+    )
+
+
+@app.route("/coop/new", methods=["GET", "POST"])
+def coop_new_request():
+    """نموذج إصدار خطاب تدريب جديد لطالب معيّن، وتوليد رابط آمن يُرسل للمنشأة."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+
+    if request.method == "POST":
+        student_email = request.form.get("student_email", "").strip()
+        company_name = request.form.get("company_name", "").strip()
+        company_email = request.form.get("company_email", "").strip()
+        position_title = request.form.get("position_title", "").strip()
+
+        if not student_email or not company_name:
+            flash("لازم تعبّي الطالب واسم المنشأة")
+            return redirect(url_for("coop_new_request"))
+
+        next_id = get_next_training_id()
+        uploaded_files = request.files.getlist("documents")
+        saved_docs = save_training_documents(next_id, uploaded_files)
+        if uploaded_files and any(f and f.filename for f in uploaded_files) and not saved_docs:
+            flash("ما تم قبول أي مستند — تأكد من الصيغة (PDF, Word, صورة) وأن الحجم أقل من 8 ميجابايت")
+
+        result = create_training_request(
+            student_email, company_name, company_email, position_title,
+            session.get("email", ""), documents=saved_docs, request_id=next_id,
+        )
+        if not result:
+            flash("ما قدرنا نلقى هذا الطالب")
+            return redirect(url_for("coop_new_request"))
+
+        verify_link = url_for("coop_verify", token=result["token"], _external=True)
+        flash(f"تم إصدار الخطاب — رابط المنشأة: {verify_link}", "success")
+        return redirect(url_for("coop_dashboard"))
+
+    students = get_all_students()
+    return render_template("coop_new.html", user=session["user"], students=students)
+
+
+@app.route("/coop/verify/<token>", methods=["GET", "POST"])
+def coop_verify(token):
+    """صفحة عامة بدون تسجيل دخول — تفتحها المنشأة عبر رابطها الآمن لقبول أو رفض الطالب."""
+    training_request = get_training_request_by_token(token)
+    if not training_request:
+        return render_template("coop_verify.html", state="notfound")
+
+    if is_training_link_expired(training_request) and training_request[7] == "قيد المراجعة عند المنشأة":
+        return render_template("coop_verify.html", state="expired", req=training_request)
+
+    if training_request[7] != "قيد المراجعة عند المنشأة":
+        return render_template("coop_verify.html", state="decided", req=training_request)
+
+    if request.method == "POST":
+        decision = request.form.get("decision", "")
+        supervisor_name = request.form.get("supervisor_name", "").strip()
+        start_date = request.form.get("start_date", "").strip()
+        end_date = request.form.get("end_date", "").strip()
+
+        if decision not in ("accept", "reject"):
+            return render_template("coop_verify.html", state="pending", req=training_request, error="فضلًا اختر القبول أو الرفض")
+        if decision == "accept" and not supervisor_name:
+            return render_template("coop_verify.html", state="pending", req=training_request, error="لازم تكتب اسم المشرف الميداني")
+        if decision == "accept" and start_date and end_date and end_date < start_date:
+            return render_template("coop_verify.html", state="pending", req=training_request, error="تاريخ نهاية التدريب لازم يكون بعد تاريخ البداية")
+
+        result = decide_training_request(token, decision, supervisor_name, start_date, end_date)
+        if result == "ok":
+            return render_template("coop_verify.html", state="submitted", decision=decision)
+        elif result == "expired":
+            return render_template("coop_verify.html", state="expired", req=training_request)
+        elif result == "already_decided":
+            return render_template("coop_verify.html", state="decided", req=training_request)
+        else:
+            return render_template("coop_verify.html", state="notfound")
+
+    return render_template("coop_verify.html", state="pending", req=training_request)
+
+
+def _valid_email(value):
+    value = (value or "").strip()
+    return len(value) <= 120 and "@" in value and "." in value.split("@")[-1] and " " not in value
+
+
+@app.route("/coop/request", methods=["GET", "POST"])
+def coop_student_request():
+    """الطالب يقدّم طلب تدريب تعاوني ويحدد الجهة اللي يبيها، عشان الكلية تصدر له خطاب موجّه لها."""
+    guard = require_student()
+    if guard:
+        return guard
+
+    if request.method == "POST":
+        company_name = " ".join(request.form.get("company_name", "").split())
+        position_title = " ".join(request.form.get("position_title", "").split())
+        company_email = request.form.get("company_email", "").strip()
+        notes = " ".join(request.form.get("notes", "").split())
+
+        error = None
+        if not company_name:
+            error = "لازم تكتب اسم الجهة"
+        elif len(company_name) > 100 or len(position_title) > 100:
+            error = "اسم الجهة أو المسمى طويل زيادة (الحد 100 حرف)"
+        elif company_email and not _valid_email(company_email):
+            error = "صيغة إيميل الجهة غير صحيحة"
+        elif len(notes) > 500:
+            error = "الملاحظات طويلة زيادة (الحد 500 حرف)"
+
+        if not error:
+            result = create_student_training_request(
+                session.get("email", ""), company_name, company_email, position_title, notes,
+            )
+            if "id" in result:
+                flash("وصل طلبك للكلية — بنصدر لك الخطاب الموجّه للجهة، وتتابع حالته من هنا", "success")
+                return redirect(url_for("my_coop"))
+            if result["error"] == "duplicate":
+                error = "عندك طلب نشط لنفس الجهة بالفعل، تابعه من صفحة الخدمة"
+            elif result["error"] == "limit":
+                error = f"وصلت للحد الأقصى ({MAX_OPEN_STUDENT_REQUESTS} طلبات) بانتظار إصدار الخطاب — انتظر الكلية تعالجها أول"
+            else:
+                error = "ما قدرنا نسجّل الطلب، حاول مرة ثانية"
+        flash(error)
+        return render_template("coop_request.html", user=session["user"], form=request.form)
+
+    return render_template("coop_request.html", user=session["user"], form={})
+
+
+@app.route("/coop/<int:req_id>/issue", methods=["GET", "POST"])
+def coop_issue_letter(req_id):
+    """الموظف يراجع طلب الطالب، ويكمّل بيانات الجهة، ويصدر الخطاب (يولّد رابط المنشأة)."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+
+    row = get_training_request_by_id(req_id)
+    if not row or row[7] != STATUS_AWAITING:
+        flash("هذا الطلب مو متاح للإصدار (ممكن انصدر أو انرفض قبل)")
+        return redirect(url_for("coop_dashboard"))
+
+    if request.method == "POST":
+        company_name = " ".join(request.form.get("company_name", "").split())
+        company_email = request.form.get("company_email", "").strip()
+        position_title = " ".join(request.form.get("position_title", "").split())
+
+        if not company_name:
+            flash("لازم تكتب اسم الجهة")
+            return render_template("coop_issue.html", user=session["user"], req=row, form=request.form)
+        if company_email and not _valid_email(company_email):
+            flash("صيغة إيميل الجهة غير صحيحة")
+            return render_template("coop_issue.html", user=session["user"], req=row, form=request.form)
+
+        uploaded_files = request.files.getlist("documents")
+        saved_docs = save_training_documents(req_id, uploaded_files)
+        if uploaded_files and any(f and f.filename for f in uploaded_files) and not saved_docs:
+            flash("ما تم قبول أي مستند — تأكد من الصيغة (PDF, Word, صورة) وأن الحجم أقل من 8 ميجابايت")
+
+        result = issue_training_letter(
+            req_id, company_name, company_email, position_title,
+            session.get("email", ""), documents=saved_docs,
+        )
+        if not result:
+            flash("ما قدرنا نصدر الخطاب — الطلب تغيّرت حالته")
+            return redirect(url_for("coop_dashboard"))
+
+        verify_link = url_for("coop_verify", token=result["token"], _external=True)
+        flash(f"تم إصدار الخطاب — رابط المنشأة: {verify_link}", "success")
+        return redirect(url_for("coop_dashboard"))
+
+    return render_template("coop_issue.html", user=session["user"], req=row, form={})
+
+
+@app.route("/coop/<int:req_id>/reject", methods=["POST"])
+def coop_college_reject(req_id):
+    """الموظف يرفض طلب الطالب (قبل إصدار الخطاب) مع سبب يظهر للطالب."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+    reason = " ".join(request.form.get("reason", "").split())
+    if not reason or len(reason) > 300:
+        flash("اكتب سبب الرفض (بحد أقصى 300 حرف) عشان يظهر للطالب")
+        return redirect(url_for("coop_dashboard"))
+    if reject_student_training_request(req_id, reason):
+        flash("تم رفض الطلب وإشعار الطالب بالسبب", "success")
+    else:
+        flash("ما قدرنا نرفض الطلب — ممكن انصدر أو انرفض قبل")
+    return redirect(url_for("coop_dashboard"))
+
+
+@app.route("/my-coop")
+def my_coop():
+    """صفحة الطالب لمتابعة حالة طلبات التدريب التعاوني الخاصة به."""
+    guard = require_student()
+    if guard:
+        return guard
+    my_requests = get_training_requests_by_student(session.get("email", ""))
+    for r in my_requests:
+        token = r.pop("token")
+        r["link"] = url_for("coop_verify", token=token, _external=True) if token else ""
+    return render_template("my_coop.html", user=session["user"], requests=my_requests)
+
+
+@app.route("/coop/<int:req_id>/complete", methods=["POST"])
+def coop_submit_completion(req_id):
+    """الطالب يرفع شهادة إتمام التدريب من المنشأة بعد نهاية فترة التدريب، وتروح لمراجعة الكلية."""
+    guard = require_student()
+    if guard:
+        return guard
+
+    row = get_training_request_by_id(req_id)
+    if not row or row[1].strip().lower() != session.get("email", "").strip().lower():
+        flash("ما قدرنا نلقى هذا الطلب")
+        return redirect(url_for("my_coop"))
+    if row[7] != "تم القبول":
+        flash("هذا الطلب مو بحالة تسمح برفع شهادة إتمام")
+        return redirect(url_for("my_coop"))
+
+    stored = save_single_training_file(req_id, request.files.get("completion_cert"), prefix="cert_")
+    if not stored:
+        flash("ما تم قبول الملف — تأكد من الصيغة (PDF, Word, صورة) وأن الحجم أقل من 8 ميجابايت")
+        return redirect(url_for("my_coop"))
+
+    if not submit_completion_certificate(req_id, session.get("email", ""), stored):
+        flash("ما قدرنا نسجّل الشهادة — حاول مرة ثانية")
+        return redirect(url_for("my_coop"))
+
+    flash("تم رفع شهادة الإتمام، بانتظار مراجعة الكلية لها", "success")
+    return redirect(url_for("my_coop"))
+
+
+@app.route("/coop/<int:req_id>/complete/review", methods=["POST"])
+def coop_review_completion(req_id):
+    """الموظف يعتمد أو يرفض شهادة إتمام التدريب اللي رفعها الطالب، ويقدر يرفق الشهادة الرسمية عند الاعتماد."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+
+    decision = request.form.get("decision", "")
+    if decision == "approve":
+        cert_file = request.files.get("final_certificate")
+        if not cert_file or not cert_file.filename:
+            flash("لازم ترفق شهادة الطالب عشان تعتمد إتمام التدريب")
+            return redirect(url_for("coop_dashboard"))
+        final_cert = save_single_training_file(req_id, cert_file, prefix="finalcert_")
+        if not final_cert:
+            flash("ما تم قبول ملف الشهادة — تأكد من الصيغة (PDF, Word, صورة) وأن الحجم أقل من 8 ميجابايت")
+            return redirect(url_for("coop_dashboard"))
+        if review_completion_certificate(req_id, "approve", final_cert=final_cert):
+            flash("تم اعتماد إتمام التدريب وإرفاق الشهادة للطالب", "success")
+        else:
+            flash("ما قدرنا نعتمد — تأكد إن فيه شهادة بانتظار المراجعة لهذا الطلب")
+    elif decision == "reject":
+        reason = " ".join(request.form.get("reason", "").split())
+        if not reason or len(reason) > 300:
+            flash("اكتب سبب رفض الشهادة (بحد أقصى 300 حرف) عشان يظهر للطالب")
+        elif review_completion_certificate(req_id, "reject", reason=reason):
+            flash("تم رفض الشهادة وإشعار الطالب بالسبب", "success")
+        else:
+            flash("ما قدرنا نرفض — تأكد إن فيه شهادة بانتظار المراجعة لهذا الطلب")
+    else:
+        flash("قرار غير صحيح")
+    return redirect(url_for("coop_dashboard"))
 
 
 def get_user_by_email(email):
@@ -780,6 +1122,434 @@ def is_ticket_visible(row):
     except ValueError:
         return True
     return datetime.now() - closed_time <= CLOSED_HIDE_AFTER
+
+
+# ============================ التدريب التعاوني ============================
+
+TRAINING_STATUSES = ("قيد المراجعة عند المنشأة", "تم القبول", "مرفوض")
+
+
+def get_training_requests_by_student(email):
+    """يرجع طلبات التدريب التعاوني الخاصة بطالب واحد (الأحدث أولًا) بدون أي بيانات حساسة —
+    الرمز السري (token) وإيميل المنشأة ما تنعرض للطالب أبدًا.
+    خطاب التدريب (المستندات المرفقة وقت الإصدار) يظهر للطالب بمجرد إصدار الخطاب، عشان يقدر يطبعه."""
+    email = (email or "").strip().lower()
+    result = []
+    for row in get_all_training_requests():
+        if row[1].strip().lower() != email:
+            continue
+        if not is_training_request_visible(row):
+            continue
+        if row[7] == "تم القبول":
+            state = "accepted"
+        elif row[7] == "مرفوض":
+            state = "rejected"
+        elif row[7] == STATUS_AWAITING:
+            state = "awaiting"
+        elif row[7] == STATUS_COLLEGE_REJECTED:
+            state = "college_rejected"
+        elif row[7] == STATUS_COMPANY_PENDING and is_training_link_expired(row):
+            state = "expired"
+        else:
+            state = "pending"
+
+        # الخطاب موجود فقط بعد الإصدار (كل الحالات إلا انتظار الإصدار أو رفض الكلية قبل الإصدار)
+        documents = []
+        if state not in ("awaiting", "college_rejected") and row[15]:
+            for stored_name in row[15].split(","):
+                stored_name = stored_name.strip()
+                if not stored_name:
+                    continue
+                ext = stored_name.rsplit(".", 1)[-1].lower() if "." in stored_name else ""
+                documents.append({
+                    "url": url_for("static", filename=f"coop_docs/{stored_name}"),
+                    "name": display_doc_name(stored_name),
+                    "is_image": ext in ("jpg", "jpeg", "png"),
+                })
+
+        training_ended = False
+        if row[18]:
+            try:
+                training_ended = date.today() >= datetime.strptime(row[18], "%Y-%m-%d").date()
+            except ValueError:
+                training_ended = False
+
+        result.append({
+            "id": row[0],
+            "company_name": row[4],
+            "position_title": row[6],
+            "status": row[7],
+            "state": state,
+            "expires_at": row[9],
+            "created_at": row[10],
+            "supervisor_name": row[11],
+            "start_date": row[12],
+            "end_date": row[18],
+            "training_ended": training_ended,
+            "decided_at": row[13],
+            "college_reject_reason": row[17],
+            "documents": documents,
+            "completion_status": row[20],
+            "completion_cert_url": url_for("static", filename=f"coop_docs/{row[19]}") if row[19] else "",
+            "completion_cert_name": display_doc_name(row[19]) if row[19] else "",
+            "completion_reject_reason": row[23],
+            "final_certificate_url": url_for("static", filename=f"coop_docs/{row[24]}") if row[24] else "",
+            "final_certificate_name": display_doc_name(row[24]) if row[24] else "",
+            # رمز رابط المنشأة يُعرض للطالب فقط طالما الرابط صالح، عشان يسلّمه للجهة
+            "token": row[8] if state == "pending" else "",
+        })
+    return result
+
+
+def get_next_training_id():
+    """يرجع رقم الطلب التالي = أكبر رقم موجود + 1، نفس منطق ترقيم البلاغات."""
+    max_id = 0
+    if os.path.exists(TRAINING_FILE):
+        with open(TRAINING_FILE, "r", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            next(reader, None)
+            for row in reader:
+                if not row:
+                    continue
+                try:
+                    max_id = max(max_id, int(row[0]))
+                except (ValueError, IndexError):
+                    continue
+    return max_id + 1
+
+
+def create_training_request(student_email, company_name, company_email, position_title, issued_by, documents=None, request_id=None):
+    """ينشئ طلب تدريب تعاوني جديد لطالب معيّن، ويولّد رمز وصول آمن (token) للمنشأة
+    صالح لمدة TRAINING_LINK_VALID_DAYS يوم، ترسله الكلية للمنشأة عشان تقبل/ترفض الطالب من دون حساب.
+    documents: أسماء الملفات المخزّنة (بعد حفظها بمجلد TRAINING_DOCS_DIR) لإرفاقها بالطلب."""
+    student = get_user_by_email(student_email)
+    if not student or student["role"] != "student":
+        return None
+
+    next_id = request_id if request_id is not None else get_next_training_id()
+    token = secrets.token_urlsafe(24)
+    now = datetime.now()
+    expires_at = now + timedelta(days=TRAINING_LINK_VALID_DAYS)
+    documents_str = ",".join(documents) if documents else ""
+
+    with open(TRAINING_FILE, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            next_id, student_email, student["full_name"], student["training_number"],
+            company_name, company_email, position_title,
+            "قيد المراجعة عند المنشأة", token, expires_at.strftime("%Y-%m-%d %H:%M"),
+            now.strftime("%Y-%m-%d %H:%M"),
+            "", "", "", issued_by, documents_str, "", "",
+        ])
+
+    return {"id": next_id, "token": token}
+
+
+def _pad_training_row(row):
+    while len(row) < 25:
+        row.append("")
+    return row
+
+
+def display_doc_name(stored_name):
+    """يشيل بادئة التخزين (رقم الطلب + رمز عشوائي) ويرجّع اسم الملف الأصلي للعرض على الموظف."""
+    parts = stored_name.split("_", 2)
+    return parts[2] if len(parts) == 3 else stored_name
+
+
+def save_training_documents(request_id, files):
+    """يحفظ مستندات مرفقة (خطاب رسمي، سيرة ذاتية...) بمجلد ثابت، ويرجّع أسماء الملفات المخزّنة.
+    يتجاهل الملفات بصيغة غير مسموحة أو تتجاوز الحجم الأقصى بدل ما يوقف العملية كاملة."""
+    saved = []
+    os.makedirs(TRAINING_DOCS_DIR, exist_ok=True)
+    for file in files[:MAX_DOC_FILES]:
+        if not file or not file.filename:
+            continue
+        ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+        if ext not in ALLOWED_DOC_EXT:
+            continue
+        file.seek(0, os.SEEK_END)
+        size = file.tell()
+        file.seek(0)
+        if size > MAX_DOC_SIZE:
+            continue
+        safe_name = secure_filename(file.filename) or f"file.{ext}"
+        stored_name = f"{request_id}_{secrets.token_hex(3)}_{safe_name}"
+        file.save(os.path.join(TRAINING_DOCS_DIR, stored_name))
+        saved.append(stored_name)
+    return saved
+
+
+def save_single_training_file(request_id, file, prefix=""):
+    """يحفظ ملف واحد (شهادة إتمام تدريب مثلًا) بنفس قيود مستندات التدريب.
+    يرجّع اسم الملف المخزّن، أو None لو الملف غير موجود أو الصيغة/الحجم غير مقبولة."""
+    if not file or not file.filename:
+        return None
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_DOC_EXT:
+        return None
+    file.seek(0, os.SEEK_END)
+    size = file.tell()
+    file.seek(0)
+    if size > MAX_DOC_SIZE:
+        return None
+    os.makedirs(TRAINING_DOCS_DIR, exist_ok=True)
+    safe_name = secure_filename(file.filename) or f"file.{ext}"
+    stored_name = f"{prefix}{request_id}_{secrets.token_hex(3)}_{safe_name}"
+    file.save(os.path.join(TRAINING_DOCS_DIR, stored_name))
+    return stored_name
+
+
+def submit_completion_certificate(req_id, student_email, stored_name):
+    """الطالب يرفع شهادة إتمام تدريب من المنشأة بعد نهاية فترة التدريب، وتروح لمراجعة الكلية.
+    يُسمح بإعادة الرفع لو الشهادة السابقة انرفضت. يرجّع True/None."""
+    def updater(row):
+        if row[1].strip().lower() != (student_email or "").strip().lower():
+            return None
+        if row[7] != "تم القبول":
+            return None
+        if row[20] == COMPLETION_APPROVED:
+            return None
+        row[19] = stored_name
+        row[20] = COMPLETION_PENDING
+        row[21] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        row[22] = ""
+        row[23] = ""
+        return True
+    return _update_training_row(req_id, updater)
+
+
+def review_completion_certificate(req_id, decision, reason="", final_cert=None):
+    """الكلية تعتمد أو ترفض شهادة الإتمام اللي رفعها الطالب. يرجّع True/None."""
+    def updater(row):
+        if row[20] != COMPLETION_PENDING:
+            return None
+        row[22] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        if decision == "approve":
+            row[20] = COMPLETION_APPROVED
+            if final_cert:
+                row[24] = final_cert
+        else:
+            row[20] = COMPLETION_REJECTED
+            row[23] = reason
+        return True
+    return _update_training_row(req_id, updater)
+
+
+def get_all_training_requests():
+    """يرجع كل طلبات التدريب التعاوني، الأحدث أولًا، لعرضها بلوحة فريق الدعم الفني."""
+    if not os.path.exists(TRAINING_FILE):
+        return []
+    with open(TRAINING_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        rows = [_pad_training_row(row) for row in reader if row]
+    rows.reverse()
+    return rows
+
+
+def is_training_request_visible(row):
+    """يرجع False إذا كان الطلب مقفول (قبول/رفض المنشأة أو رفض الكلية) ومرّ على قراره أكثر
+    من TRAINING_HIDE_AFTER. الطلب يبقى محفوظًا بالملف دائمًا، بس نخفيه من اللوحة والأرشيف يتكفّل فيه."""
+    if row[7] not in CLOSED_TRAINING_STATUSES:
+        return True
+    if row[7] == "تم القبول" and row[20] == COMPLETION_PENDING:
+        return True  # فيه شهادة إتمام بانتظار مراجعة الكلية — يبقى ظاهرًا باللوحة حتى لو مرّ أكثر من TRAINING_HIDE_AFTER
+    decided_at = row[13] if len(row) > 13 else ""
+    if not decided_at:
+        return True
+    try:
+        decided_time = datetime.strptime(decided_at, "%Y-%m-%d %H:%M")
+    except ValueError:
+        return True
+    return datetime.now() - decided_time <= TRAINING_HIDE_AFTER
+
+
+def get_visible_training_requests():
+    """كل طلبات التدريب الظاهرة حاليًا بلوحة فريق الدعم الفني (تستبعد المقفولة اللي مرّ على قرارها
+    أكثر من TRAINING_HIDE_AFTER — هذي تروح للأرشيف بدالها)."""
+    return [row for row in get_all_training_requests() if is_training_request_visible(row)]
+
+
+def get_archived_training_requests():
+    """يجيب طلبات التدريب المقفولة (قبول/رفض) اللي مرّ على قرارها أكثر من TRAINING_HIDE_AFTER —
+    يعني اللي فعليًا اختفت من لوحة المتابعة الرئيسية. ما فيه تكرار بين اللوحة والأرشيف:
+    الطلب يكون بأحدهما بس، مو بالاثنين بنفس الوقت."""
+    rows = [
+        row for row in get_all_training_requests()
+        if row[7] in CLOSED_TRAINING_STATUSES and not is_training_request_visible(row)
+    ]
+    return rows
+
+
+def get_training_request_by_id(req_id):
+    """يرجع صف طلب التدريب برقمه، أو None لو ما وجد."""
+    for row in get_all_training_requests():
+        if row[0] == str(req_id):
+            return row
+    return None
+
+
+def _normalize_company(name):
+    return " ".join((name or "").split()).lower()
+
+
+def create_student_training_request(student_email, company_name, company_email, position_title, notes):
+    """ينشئ طلب تدريب قدّمه الطالب بنفسه (بدون رمز)، بحالة "بانتظار إصدار الخطاب".
+    يرجّع {"id": ...} عند النجاح، أو {"error": "nostudent" | "duplicate" | "limit"}."""
+    student = get_user_by_email(student_email)
+    if not student or student["role"] != "student":
+        return {"error": "nostudent"}
+
+    email_key = student_email.strip().lower()
+    company_key = _normalize_company(company_name)
+    awaiting = 0
+    for row in get_all_training_requests():
+        if row[1].strip().lower() != email_key:
+            continue
+        if row[7] == STATUS_AWAITING:
+            awaiting += 1
+        active = (
+            row[7] in (STATUS_AWAITING, "تم القبول")
+            or (row[7] == STATUS_COMPANY_PENDING and not is_training_link_expired(row))
+        )
+        if active and _normalize_company(row[4]) == company_key:
+            return {"error": "duplicate"}
+    if awaiting >= MAX_OPEN_STUDENT_REQUESTS:
+        return {"error": "limit"}
+
+    next_id = get_next_training_id()
+    with open(TRAINING_FILE, "a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow([
+            next_id, student_email, student["full_name"], student["training_number"],
+            company_name, company_email, position_title,
+            STATUS_AWAITING, "", "", datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "", "", "", "", "", notes, "",
+        ])
+    return {"id": next_id}
+
+
+def _update_training_row(req_id, updater):
+    """يقرأ الملف كاملًا ويطبّق updater على صف الطلب المطلوب فقط ثم يحفظ.
+    updater يستقبل الصف (بعد تعبئته للطول الكامل) ويعدّله، ويرجّع نتيجة العملية.
+    يرجّع None لو ما لقى الطلب."""
+    if not os.path.exists(TRAINING_FILE):
+        return None
+    with open(TRAINING_FILE, "r", encoding="utf-8") as f:
+        rows = list(csv.reader(f))
+    result = None
+    for i, row in enumerate(rows):
+        if i == 0 or not row or row[0] != str(req_id):
+            continue
+        row = _pad_training_row(row)
+        rows[i] = row
+        result = updater(row)
+        break
+    if result is not None:
+        with open(TRAINING_FILE, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows)
+    return result
+
+
+def issue_training_letter(req_id, company_name, company_email, position_title, issued_by, documents=None):
+    """يحوّل طلب الطالب من "بانتظار إصدار الخطاب" إلى "قيد المراجعة عند المنشأة"،
+    ويولّد رمز الوصول للمنشأة. يرجّع {"token": ...} أو None لو الطلب ما عاد متاح."""
+    def updater(row):
+        if row[7] != STATUS_AWAITING:
+            return None
+        now = datetime.now()
+        token = secrets.token_urlsafe(24)
+        row[4] = company_name
+        row[5] = company_email
+        row[6] = position_title
+        row[7] = STATUS_COMPANY_PENDING
+        row[8] = token
+        row[9] = (now + timedelta(days=TRAINING_LINK_VALID_DAYS)).strftime("%Y-%m-%d %H:%M")
+        row[10] = now.strftime("%Y-%m-%d %H:%M")
+        row[14] = issued_by
+        row[15] = ",".join(documents) if documents else ""
+        return {"token": token}
+    return _update_training_row(req_id, updater)
+
+
+def reject_student_training_request(req_id, reason):
+    """الكلية ترفض طلب الطالب قبل إصدار الخطاب، مع سبب يظهر للطالب."""
+    def updater(row):
+        if row[7] != STATUS_AWAITING:
+            return None
+        row[7] = STATUS_COLLEGE_REJECTED
+        row[13] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        row[17] = reason
+        return True
+    return _update_training_row(req_id, updater)
+
+
+def is_training_link_expired(row):
+    """يتحقق هل انتهت صلاحية رابط المنشأة لهذا الطلب."""
+    expires_at = row[9]
+    if not expires_at:
+        return False
+    try:
+        expiry = datetime.strptime(expires_at, "%Y-%m-%d %H:%M")
+    except ValueError:
+        return False
+    return datetime.now() > expiry
+
+
+def get_training_request_by_token(token):
+    """يرجع صف طلب التدريب المطابق للرمز، أو None لو ما وجد."""
+    if not token or not os.path.exists(TRAINING_FILE):
+        return None  # الطلبات اللي ما صدر لها خطاب بعد رمزها فاضي، ما نطابقها أبدًا
+    with open(TRAINING_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            if not row:
+                continue
+            row = _pad_training_row(row)
+            if row[8] == token:
+                return row
+    return None
+
+
+def decide_training_request(token, decision, supervisor_name="", start_date="", end_date=""):
+    """يسجّل قرار المنشأة (قبول/رفض) عبر رابطها الآمن. يرفض العملية لو الرمز منتهي
+    أو الطلب تم البت فيه مسبقًا، عشان ما ينفتح نفس الرابط لتغيير قرار قديم."""
+    if not os.path.exists(TRAINING_FILE):
+        return "notfound"
+
+    with open(TRAINING_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        rows = list(reader)
+
+    result = "notfound"
+    updated = False
+    for row in rows[1:]:
+        if not row or row[8] != token:
+            continue
+        row = _pad_training_row(row)
+
+        if row[7] != "قيد المراجعة عند المنشأة":
+            result = "already_decided"
+            continue
+        if is_training_link_expired(row):
+            result = "expired"
+            continue
+
+        row[7] = "تم القبول" if decision == "accept" else "مرفوض"
+        row[11] = supervisor_name
+        row[12] = start_date
+        row[13] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        row[18] = end_date
+        updated = True
+        result = "ok"
+
+    if updated:
+        with open(TRAINING_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerows(rows)
+
+    return result
 
 
 def update_ticket_status(ticket_id, status, handler_email=""):

@@ -292,6 +292,9 @@
     background:linear-gradient(150deg, rgba(200,162,74,.14), rgba(200,162,74,.03));
   }
   .card.c-blue{ --accent:#7FA8D9; --accent-bg:linear-gradient(135deg, rgba(105,150,199,.28), rgba(105,150,199,.06)); --accent-border:rgba(105,150,199,.4); --accent-shadow:rgba(105,150,199,.22); }
+  .card.c-teal{ --accent:#2FB6A8; --accent-bg:linear-gradient(135deg, rgba(47,182,168,.3), rgba(47,182,168,.08)); --accent-border:rgba(47,182,168,.4); --accent-shadow:rgba(47,182,168,.22);
+    background:linear-gradient(150deg, rgba(47,182,168,.14), rgba(47,182,168,.03));
+  }
 
   /* ===== Side panel (slide-out menu) ===== */
   .overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; }
@@ -550,6 +553,12 @@
           <div class="title">بلاغات الطلاب</div>
           <div class="sub">عرض جميع البلاغات الواردة وتحديث حالتها</div>
         </a>
+        <a href="{{ url_for('coop_dashboard') }}" class="card c-teal">
+          <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 5L21 9L12 13L3 9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 11V16C7 16 9 18 12 18C15 18 17 16 17 16V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <div class="title">التدريب التعاوني</div>
+          <div class="sub">{% if coop_new_count %}🔔 {{ coop_new_count }} طلب جديد من الطلاب بانتظار الإصدار{% else %}إصدار خطابات التدريب ومتابعة قرار المنشآت{% endif %}</div>
+        </a>
         <a href="{{ url_for('profile') }}" class="card c-blue">
           <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <div class="icon-badge">
@@ -561,6 +570,12 @@
           </div>
           <div class="title">الملف الشخصي</div>
           <div class="sub">تعديل بياناتك الشخصية</div>
+        </a>
+        <a href="{{ url_for('coop_archive') }}" class="card c-teal">
+          <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21V19C21 19.5523 20.5523 20 20 20H4C3.44772 20 3 19.5523 3 19V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 7L5 4H19L21 7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 11H14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+          <div class="title">سجل طلبات التدريب المؤرشفة</div>
+          <div class="sub">{{ coop_archive_count }} طلبات تدريب مؤرشفة</div>
         </a>
         <a href="{{ url_for('it_archive') }}" class="card" style="grid-column:1 / -1;">
           <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
