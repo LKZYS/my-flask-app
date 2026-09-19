@@ -584,6 +584,7 @@ def it_dashboard():
     top_staff = get_top_staff_this_month()
     coop_new_count = sum(1 for r in get_all_training_requests() if r[7] == STATUS_AWAITING)
     coop_archive_count = len(get_archived_training_requests())
+    coop_notifications = get_coop_notifications()
     return render_template(
         "it_dashboard.html",
         user=session["user"],
@@ -598,6 +599,7 @@ def it_dashboard():
         top_staff_count=top_staff[1] if top_staff else 0,
         coop_new_count=coop_new_count,
         coop_archive_count=coop_archive_count,
+        coop_notifications=coop_notifications,
     )
 
 
@@ -845,9 +847,13 @@ def coop_issue_letter(req_id):
             return render_template("coop_issue.html", user=session["user"], req=row, form=request.form)
 
         uploaded_files = request.files.getlist("documents")
+        if not any(f and f.filename for f in uploaded_files):
+            flash("لازم ترفق مستند واحد على الأقل (خطاب رسمي، سيرة ذاتية...)")
+            return render_template("coop_issue.html", user=session["user"], req=row, form=request.form)
         saved_docs = save_training_documents(req_id, uploaded_files)
-        if uploaded_files and any(f and f.filename for f in uploaded_files) and not saved_docs:
+        if not saved_docs:
             flash("ما تم قبول أي مستند — تأكد من الصيغة (PDF, Word, صورة) وأن الحجم أقل من 8 ميجابايت")
+            return render_template("coop_issue.html", user=session["user"], req=row, form=request.form)
 
         result = issue_training_letter(
             req_id, company_name, company_email, position_title,
@@ -1380,6 +1386,28 @@ def get_archived_training_requests():
         if row[7] in CLOSED_TRAINING_STATUSES and not is_training_request_visible(row)
     ]
     return rows
+
+
+def get_coop_notifications():
+    """تنبيهات فريق الدعم الفني بالتدريب التعاوني — تُحسب من حالة الطلبات الحالية (بدون تخزين إضافي)،
+    فأي تنبيه يختفي تلقائيًا لما الموظف يعالج الطلب (يصدر الخطاب / يراجع الشهادة).
+    كل عنصر: {req_id, kind, text, time}. الأحدث أولًا."""
+    items = []
+    for r in get_all_training_requests():
+        if r[7] == "تم القبول" and r[20] == COMPLETION_PENDING:
+            items.append({
+                "req_id": r[0], "kind": "certificate",
+                "text": f"الطالب {r[2]} أرفق شهادة الإتمام",
+                "time": r[21] or r[13],
+            })
+        elif r[7] == STATUS_AWAITING:
+            items.append({
+                "req_id": r[0], "kind": "new_request",
+                "text": f"الطالب {r[2]} قدّم طلب تدريب جديد",
+                "time": r[10],
+            })
+    items.sort(key=lambda n: n["time"] or "", reverse=True)
+    return items
 
 
 def get_training_request_by_id(req_id):

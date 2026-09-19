@@ -297,6 +297,21 @@
         {% for r in requests %}
           {% set label = {'awaiting': 'بانتظار إصدار الخطاب', 'pending': 'قيد المراجعة عند المنشأة', 'accepted': 'تم القبول', 'rejected': 'مرفوض', 'expired': 'انتهت صلاحية الرابط', 'college_rejected': 'رفضته الكلية'}[r.state] %}
           {% set icon = {'awaiting': '📝', 'pending': '⏳', 'accepted': '✓', 'rejected': '✖', 'expired': '⌛', 'college_rejected': '✖'}[r.state] %}
+          {% set badge_class = r.state %}
+          {% if r.state == 'accepted' %}
+            {% if r.completion_status == 'قيد المراجعة' %}
+              {% set label = 'جاري مراجعة شهادة الإتمام' %}
+              {% set icon = '📄' %}
+              {% set badge_class = 'pending' %}
+            {% elif r.completion_status == 'معتمدة' %}
+              {% set label = 'اكتمل التدريب' %}
+              {% set icon = '🎓' %}
+            {% elif r.completion_status == 'مرفوضة' %}
+              {% set label = 'الشهادة مرفوضة' %}
+              {% set icon = '⚠️' %}
+              {% set badge_class = 'rejected' %}
+            {% endif %}
+          {% endif %}
           {% set tab = 'awaiting' if r.state == 'awaiting' else ('pending' if r.state in ('pending', 'expired') else ('accepted' if r.state == 'accepted' else 'rejected')) %}
           <div class="req-card" data-status="{{ tab }}" style="--status-color: var(--c-{{ r.state }});">
             <div class="req-head">
@@ -304,7 +319,7 @@
                 <span class="req-title">{{ r.company_name }}</span>
                 <span class="req-id">#{{ r.id }}</span>
               </div>
-              <span class="badge {{ r.state }}">{{ icon }} {{ label }}</span>
+              <span class="badge {{ badge_class }}">{{ icon }} {{ label }}</span>
             </div>
             <p class="req-pos">{{ r.position_title or 'المسمى الوظيفي غير محدد' }}</p>
 

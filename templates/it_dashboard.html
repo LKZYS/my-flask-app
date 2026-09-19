@@ -296,6 +296,55 @@
     background:linear-gradient(150deg, rgba(47,182,168,.14), rgba(47,182,168,.03));
   }
 
+  /* ===== Notifications (coop card) ===== */
+  .notif-chip{
+    position:absolute; top:22px; left:20px; z-index:2;
+    display:flex; align-items:center; gap:6px;
+    padding:6px 10px; border-radius:999px; cursor:pointer;
+    font-family:inherit; font-size:12.5px; font-weight:700;
+    color:#F1C75B; background:rgba(217,167,42,.14);
+    border:1px solid rgba(217,167,42,.45);
+    transition:background .2s ease, transform .2s ease;
+  }
+  .notif-chip:hover{ background:rgba(217,167,42,.26); transform:scale(1.06); }
+  .notif-chip svg{ width:16px; height:16px; animation:bellRing 2.4s ease-in-out infinite; transform-origin:50% 0; }
+  @keyframes bellRing{ 0%,88%,100%{ transform:rotate(0); } 91%{ transform:rotate(14deg); } 94%{ transform:rotate(-12deg); } 97%{ transform:rotate(8deg); } }
+  .card.has-notif .arrow{ display:none; }
+  .notif-label{
+    display:inline-block; margin-bottom:8px; padding:3px 10px; border-radius:999px;
+    font-size:12px; font-weight:700; color:#F1C75B;
+    background:rgba(217,167,42,.14); border:1px solid rgba(217,167,42,.35);
+  }
+  .notif-overlay{ display:none; position:fixed; inset:0; z-index:1100; background:rgba(0,0,0,.55); align-items:center; justify-content:center; padding:20px; }
+  .notif-overlay.open{ display:flex; animation:notifFade .22s ease both; }
+  .notif-overlay.closing{ display:flex; animation:notifFade .18s ease reverse both; }
+  .notif-overlay.open .notif-panel{ animation:notifPop .34s cubic-bezier(.2,.9,.3,1.2) both; }
+  .notif-overlay.closing .notif-panel{ animation:notifPopOut .18s ease both; }
+  .notif-overlay.open .notif-item{ animation:notifItemIn .4s cubic-bezier(.2,.8,.2,1) both; }
+  .notif-overlay.open .notif-item:nth-of-type(1){ animation-delay:.10s; }
+  .notif-overlay.open .notif-item:nth-of-type(2){ animation-delay:.17s; }
+  .notif-overlay.open .notif-item:nth-of-type(3){ animation-delay:.24s; }
+  .notif-overlay.open .notif-item:nth-of-type(n+4){ animation-delay:.30s; }
+  .notif-item.pressed{ animation:notifPress .28s ease both !important; }
+  @keyframes notifFade{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes notifPop{ from{ opacity:0; transform:translateY(18px) scale(.94); } to{ opacity:1; transform:none; } }
+  @keyframes notifPopOut{ to{ opacity:0; transform:translateY(10px) scale(.96); } }
+  @keyframes notifItemIn{ from{ opacity:0; transform:translateX(-14px); } to{ opacity:1; transform:none; } }
+  @keyframes notifPress{ 0%{ transform:scale(1); } 45%{ transform:scale(.96); background:rgba(47,182,168,.22); border-color:#2FB6A8; } 100%{ transform:scale(1); background:rgba(47,182,168,.16); border-color:#2FB6A8; } }
+  .notif-item:active{ transform:scale(.98); }
+  @media (prefers-reduced-motion: reduce){ .notif-overlay, .notif-overlay .notif-panel, .notif-overlay .notif-item, .notif-chip svg{ animation:none !important; } }
+  .notif-panel{ width:min(440px,100%); max-height:80vh; overflow:auto; background:var(--ink-soft); border:1px solid var(--line); border-radius:18px; padding:20px; box-shadow:0 24px 60px rgba(0,0,0,.5); }
+  .notif-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .notif-head h3{ font-size:16px; font-weight:700; }
+  .notif-close{ background:none; border:none; color:var(--muted); font-size:22px; line-height:1; cursor:pointer; }
+  .notif-close:hover{ color:var(--sand); }
+  .notif-item{ display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:8px; border-radius:12px; text-decoration:none; color:var(--sand); background:rgba(244,238,225,.04); border:1px solid var(--line); transition:border-color .15s ease; }
+  .notif-item:hover{ border-color:#2FB6A8; }
+  .notif-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; background:#D9A72A; }
+  .notif-item.certificate .notif-dot{ background:#2FB6A8; }
+  .notif-text{ font-size:13.5px; font-weight:600; }
+  .notif-time{ font-size:11.5px; color:var(--muted); margin-top:2px; }
+
   /* ===== Side panel (slide-out menu) ===== */
   .overlay{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:999; }
   .overlay.open{ display:block; }
@@ -553,11 +602,22 @@
           <div class="title">بلاغات الطلاب</div>
           <div class="sub">عرض جميع البلاغات الواردة وتحديث حالتها</div>
         </a>
-        <a href="{{ url_for('coop_dashboard') }}" class="card c-teal">
+        <a href="{{ url_for('coop_dashboard') }}" class="card c-teal{% if coop_notifications %} has-notif{% endif %}">
+          {% if coop_notifications %}
+          <button type="button" class="notif-chip" id="notifOpen" aria-label="فتح التنبيهات">
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 9a6 6 0 0 1 12 0c0 5 2 6.5 2 6.5H4S6 14 6 9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="notif-count">{{ coop_notifications|length }}</span>
+          </button>
+          {% endif %}
           <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 9L12 5L21 9L12 13L3 9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M7 11V16C7 16 9 18 12 18C15 18 17 16 17 16V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
           <div class="title">التدريب التعاوني</div>
-          <div class="sub">{% if coop_new_count %}🔔 {{ coop_new_count }} طلب جديد من الطلاب بانتظار الإصدار{% else %}إصدار خطابات التدريب ومتابعة قرار المنشآت{% endif %}</div>
+          {% if coop_notifications %}
+          <div class="notif-label">لديك {{ coop_notifications|length }} {{ 'تنبيه' if coop_notifications|length == 1 else 'تنبيهات' }}</div>
+          <div class="sub">{{ coop_notifications[0].text }}{% if coop_notifications|length > 1 %} و{{ coop_notifications|length - 1 }} أخرى{% endif %}</div>
+          {% else %}
+          <div class="sub">إصدار خطابات التدريب ومتابعة قرار المنشآت</div>
+          {% endif %}
         </a>
         <a href="{{ url_for('profile') }}" class="card c-blue">
           <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
@@ -647,5 +707,53 @@
     menuBtn.addEventListener('click', toggleMenu);
     overlay.addEventListener('click', toggleMenu);
   </script>
+
+  {% if coop_notifications %}
+  <div class="notif-overlay" id="notifOverlay">
+    <div class="notif-panel" role="dialog" aria-label="التنبيهات">
+      <div class="notif-head">
+        <h3>التنبيهات ({{ coop_notifications|length }})</h3>
+        <button type="button" class="notif-close" id="notifClose" aria-label="إغلاق">×</button>
+      </div>
+      {% for n in coop_notifications %}
+        <a class="notif-item {{ n.kind }}" href="{{ url_for('coop_dashboard') }}#req-{{ n.req_id }}">
+          <span class="notif-dot"></span>
+          <div>
+            <div class="notif-text">{{ n.text }}</div>
+            <div class="notif-time">{{ n.time }}</div>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  </div>
+  <script>
+    (function(){
+      var open = document.getElementById('notifOpen');
+      var overlay = document.getElementById('notifOverlay');
+      var close = document.getElementById('notifClose');
+      if (!open || !overlay) return;
+      function openPanel(){ overlay.classList.remove('closing'); overlay.classList.add('open'); }
+      function closePanel(){
+        if (!overlay.classList.contains('open')) return;
+        overlay.classList.remove('open'); overlay.classList.add('closing');
+        setTimeout(function(){ overlay.classList.remove('closing'); }, 180);
+      }
+      open.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openPanel(); });
+      close.addEventListener('click', closePanel);
+      overlay.addEventListener('click', function(e){ if (e.target === overlay) closePanel(); });
+      document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closePanel(); });
+      // ضغطة على تنبيه: حركة ضغط قصيرة ثم الانتقال للطلب
+      overlay.querySelectorAll('.notif-item').forEach(function(item){
+        item.addEventListener('click', function(e){
+          if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+          e.preventDefault();
+          item.classList.add('pressed');
+          var href = item.getAttribute('href');
+          setTimeout(function(){ window.location.href = href; }, 260);
+        });
+      });
+    })();
+  </script>
+  {% endif %}
 </body>
 </html>

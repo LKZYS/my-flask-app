@@ -276,7 +276,7 @@
       <div class="list" id="reqList">
         {% for r in requests %}
           {% set st = 'accepted' if r[7] == 'تم القبول' else ('rejected' if r[7] in ('مرفوض', 'مرفوض من الكلية') else ('awaiting' if r[7] == 'بانتظار إصدار الخطاب' else 'pending')) %}
-          <div class="req-card" data-status="{{ st }}" data-search="{{ (r[2] ~ ' ' ~ r[4])|lower }}">
+          <div class="req-card" id="req-{{ r[0] }}" data-status="{{ st }}" data-search="{{ (r[2] ~ ' ' ~ r[4])|lower }}">
             <div class="req-top">
               <div>
                 <div class="req-student">{{ r[2] }} <span style="color:var(--muted); font-weight:400; font-size:12px;">#{{ r[0] }}</span></div>

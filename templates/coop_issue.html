@@ -80,6 +80,25 @@
   .student-box .f{ font-size:12.5px; }
   .student-box .f b{ display:block; color:var(--muted); font-weight:500; font-size:11px; margin-bottom:2px; }
   .student-box .f.wide{ flex-basis:100%; }
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(22px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeIn .6s ease both; }
+  .page-head .eyebrow{ animation:fadeUp .6s ease .05s both; }
+  .page-head h1{ animation:fadeUp .65s ease .12s both; }
+  .page-head p{ animation:fadeUp .65s ease .2s both; }
+  .student-box{ animation:fadeUp .7s ease .3s both; }
+  form{ animation:fadeUp .7s ease .4s both; }
+  .field{ animation:fadeUp .5s ease both; animation-fill-mode:backwards; }
+  .field:nth-of-type(1){ animation-delay:.55s; }
+  .field:nth-of-type(2){ animation-delay:.65s; }
+  .field:nth-of-type(3){ animation-delay:.75s; }
+  .field:nth-of-type(4){ animation-delay:.85s; }
+  .submit-btn{ animation:fadeUp .5s ease .95s both; }
+  @media (prefers-reduced-motion: reduce){
+    .topbar, .page-head .eyebrow, .page-head h1, .page-head p, .student-box, form, .field, .submit-btn{ animation:none !important; }
+  }
 </style>
 </head>
 <body>
@@ -122,12 +141,12 @@
         <p class="hint">رابط القبول/الرفض بيتولّد تلقائيًا وتقدر ترسله للجهة بأي طريقة، والإيميل هنا للتوثيق فقط.</p>
       </div>
       <div class="field">
-        <label for="position_title">المسمى الوظيفي / القسم</label>
+        <label for="position_title">المسمى الوظيفي / القسم <span style="font-weight:400; color:var(--muted); font-size:12px;">(اختياري)</span></label>
         <input type="text" name="position_title" id="position_title" maxlength="100" value="{{ form.get('position_title', req[6]) }}">
       </div>
       <div class="field">
-        <label for="documents">إرفاق مستندات (اختياري)</label>
-        <input type="file" name="documents" id="documents" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+        <label for="documents">إرفاق مستندات</label>
+        <input type="file" name="documents" id="documents" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
         <p class="hint">خطاب التدريب الرسمي، السيرة الذاتية... حتى 5 ملفات (PDF, Word, أو صورة)، كل ملف أقل من 8 ميجابايت.</p>
       </div>
       <button type="submit" class="submit-btn">
