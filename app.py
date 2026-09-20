@@ -18,6 +18,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 USERS_FILE = os.path.join(BASE_DIR, "users.csv")
 TICKETS_FILE = os.path.join(BASE_DIR, "tickets.csv")
 TRAINING_FILE = os.path.join(BASE_DIR, "training_requests.csv")
+NOTIF_DISMISS_FILE = os.path.join(BASE_DIR, "notification_dismissals.csv")  # تنبيهات الفنيين اللي تم تجاهلها (لكل موظف على حدة)
 
 TRAINING_DOCS_DIR = os.path.join(BASE_DIR, "static", "coop_docs")
 ALLOWED_DOC_EXT = {"pdf", "doc", "docx", "jpg", "jpeg", "png"}
@@ -136,6 +137,11 @@ def init_file():
                 "completion_doc", "completion_status", "completion_submitted_at",
                 "completion_reviewed_at", "completion_reject_reason", "final_certificate_doc",
             ])  # صف العناوين
+
+    if not os.path.exists(NOTIF_DISMISS_FILE):
+        with open(NOTIF_DISMISS_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["staff_email", "key", "dismissed_at"])  # صف العناوين
 
     fix_duplicate_ticket_ids()  # ينظّف أي تكرار قديم بالأرقام عند تشغيل التطبيق
 
@@ -584,7 +590,7 @@ def it_dashboard():
     top_staff = get_top_staff_this_month()
     coop_new_count = sum(1 for r in get_all_training_requests() if r[7] == STATUS_AWAITING)
     coop_archive_count = len(get_archived_training_requests())
-    coop_notifications = get_coop_notifications()
+    coop_notifications = get_coop_notifications(session.get("email", ""))
     return render_template(
         "it_dashboard.html",
         user=session["user"],
@@ -1388,26 +1394,70 @@ def get_archived_training_requests():
     return rows
 
 
-def get_coop_notifications():
-    """تنبيهات فريق الدعم الفني بالتدريب التعاوني — تُحسب من حالة الطلبات الحالية (بدون تخزين إضافي)،
+def get_dismissed_notification_keys(staff_email):
+    """مفاتيح التنبيهات اللي هذا الموظف تجاهلها."""
+    keys = set()
+    if not os.path.exists(NOTIF_DISMISS_FILE):
+        return keys
+    email = (staff_email or "").strip().lower()
+    with open(NOTIF_DISMISS_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            if len(row) >= 2 and row[0].strip().lower() == email:
+                keys.add(row[1])
+    return keys
+
+
+def dismiss_notifications(staff_email, keys):
+    """يسجّل تجاهل مجموعة تنبيهات لهذا الموظف (ما يكرر المفتاح لو كان متجاهَلًا من قبل)."""
+    already = get_dismissed_notification_keys(staff_email)
+    new_keys = [k for k in keys if k and k not in already]
+    if not new_keys:
+        return 0
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    with open(NOTIF_DISMISS_FILE, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        for k in new_keys:
+            writer.writerow([staff_email, k, now])
+    return len(new_keys)
+
+
+def get_coop_notifications(staff_email=None, include_dismissed=False):
+    """تنبيهات فريق الدعم الفني بالتدريب التعاوني — تُحسب من حالة الطلبات الحالية،
     فأي تنبيه يختفي تلقائيًا لما الموظف يعالج الطلب (يصدر الخطاب / يراجع الشهادة).
-    كل عنصر: {req_id, kind, text, time}. الأحدث أولًا."""
+    الموظف يقدر يتجاهل التنبيه يدويًا؛ والمفتاح يشمل وقت الحدث، فلو الطالب رفع شهادة جديدة
+    (بعد رفض الأولى مثلًا) يرجع التنبيه يظهر من جديد.
+    كل عنصر: {key, req_id, kind, text, time}. الأحدث أولًا."""
+    dismissed = set() if include_dismissed else get_dismissed_notification_keys(staff_email)
     items = []
     for r in get_all_training_requests():
         if r[7] == "تم القبول" and r[20] == COMPLETION_PENDING:
-            items.append({
-                "req_id": r[0], "kind": "certificate",
-                "text": f"الطالب {r[2]} أرفق شهادة الإتمام",
-                "time": r[21] or r[13],
-            })
+            kind, text, when = "certificate", f"الطالب {r[2]} أرفق شهادة الإتمام", (r[21] or r[13])
         elif r[7] == STATUS_AWAITING:
-            items.append({
-                "req_id": r[0], "kind": "new_request",
-                "text": f"الطالب {r[2]} قدّم طلب تدريب جديد",
-                "time": r[10],
-            })
+            kind, text, when = "new_request", f"الطالب {r[2]} قدّم طلب تدريب جديد", r[10]
+        else:
+            continue
+        key = f"{r[0]}|{kind}|{when}"
+        if key in dismissed:
+            continue
+        items.append({"key": key, "req_id": r[0], "kind": kind, "text": text, "time": when})
     items.sort(key=lambda n: n["time"] or "", reverse=True)
     return items
+
+
+@app.route("/coop/notifications/dismiss", methods=["POST"])
+def coop_dismiss_notifications():
+    """تجاهل تنبيه واحد (key) أو كل التنبيهات الحالية (all=1) — يرجّع JSON عشان الواجهة تحدّث نفسها."""
+    if session.get("role") != "it":
+        return {"ok": False}, 403
+    email = session.get("email", "")
+    if request.form.get("all") == "1":
+        keys = [n["key"] for n in get_coop_notifications(email)]
+    else:
+        keys = [request.form.get("key", "").strip()]
+    dismiss_notifications(email, keys)
+    return {"ok": True, "remaining": len(get_coop_notifications(email))}
 
 
 def get_training_request_by_id(req_id):

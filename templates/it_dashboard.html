@@ -91,7 +91,16 @@
     position:sticky; top:96px;
     margin-top:12px;
   }
-  @media (max-width: 1380px){ .side-rail{ display:none; } }
+  /* شاشات أصغر من 1380px (لابتوب صغير / تابلت / جوال): ما نخفي اللوحة الجانبية،
+     ننزّلها تحت المحتوى بعرض كامل عشان تظهر لكل المستخدمين */
+  @media (max-width: 1380px){
+    .page-layout{ flex-direction:column; align-items:stretch; gap:0; }
+    .content{ flex:0 0 auto; width:100%; max-width:1000px; margin:0 auto; padding-bottom:24px; }
+    .side-rail{ position:static; top:auto; flex:0 0 auto; width:100%; max-width:1000px; margin:0 auto; padding:0 24px 48px; }
+  }
+  @media (max-width: 480px){
+    .side-rail{ padding:0 16px 40px; }
+  }
 
   .side-card{
     position:relative; overflow:hidden;
@@ -320,11 +329,7 @@
   .notif-overlay.closing{ display:flex; animation:notifFade .18s ease reverse both; }
   .notif-overlay.open .notif-panel{ animation:notifPop .34s cubic-bezier(.2,.9,.3,1.2) both; }
   .notif-overlay.closing .notif-panel{ animation:notifPopOut .18s ease both; }
-  .notif-overlay.open .notif-item{ animation:notifItemIn .4s cubic-bezier(.2,.8,.2,1) both; }
-  .notif-overlay.open .notif-item:nth-of-type(1){ animation-delay:.10s; }
-  .notif-overlay.open .notif-item:nth-of-type(2){ animation-delay:.17s; }
-  .notif-overlay.open .notif-item:nth-of-type(3){ animation-delay:.24s; }
-  .notif-overlay.open .notif-item:nth-of-type(n+4){ animation-delay:.30s; }
+  .notif-overlay.open .notif-row{ animation:notifItemIn .4s cubic-bezier(.2,.8,.2,1) both; }
   .notif-item.pressed{ animation:notifPress .28s ease both !important; }
   @keyframes notifFade{ from{ opacity:0; } to{ opacity:1; } }
   @keyframes notifPop{ from{ opacity:0; transform:translateY(18px) scale(.94); } to{ opacity:1; transform:none; } }
@@ -332,14 +337,23 @@
   @keyframes notifItemIn{ from{ opacity:0; transform:translateX(-14px); } to{ opacity:1; transform:none; } }
   @keyframes notifPress{ 0%{ transform:scale(1); } 45%{ transform:scale(.96); background:rgba(47,182,168,.22); border-color:#2FB6A8; } 100%{ transform:scale(1); background:rgba(47,182,168,.16); border-color:#2FB6A8; } }
   .notif-item:active{ transform:scale(.98); }
-  @media (prefers-reduced-motion: reduce){ .notif-overlay, .notif-overlay .notif-panel, .notif-overlay .notif-item, .notif-chip svg{ animation:none !important; } }
+  @media (prefers-reduced-motion: reduce){ .notif-overlay, .notif-overlay .notif-panel, .notif-overlay .notif-row, .notif-chip svg{ animation:none !important; } }
   .notif-panel{ width:min(440px,100%); max-height:80vh; overflow:auto; background:var(--ink-soft); border:1px solid var(--line); border-radius:18px; padding:20px; box-shadow:0 24px 60px rgba(0,0,0,.5); }
   .notif-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
   .notif-head h3{ font-size:16px; font-weight:700; }
   .notif-close{ background:none; border:none; color:var(--muted); font-size:22px; line-height:1; cursor:pointer; }
   .notif-close:hover{ color:var(--sand); }
-  .notif-item{ display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:8px; border-radius:12px; text-decoration:none; color:var(--sand); background:rgba(244,238,225,.04); border:1px solid var(--line); transition:border-color .15s ease; }
+  .notif-item{ display:flex; align-items:center; gap:12px; padding:12px 14px 12px 44px; margin-bottom:0; border-radius:12px; text-decoration:none; color:var(--sand); background:rgba(244,238,225,.04); border:1px solid var(--line); transition:border-color .15s ease; }
   .notif-item:hover{ border-color:#2FB6A8; }
+  .notif-row{ position:relative; margin-bottom:8px; }
+  .notif-row.removing{ animation:notifOut .26s ease both !important; pointer-events:none; }
+  @keyframes notifOut{ 0%{ opacity:1; transform:none; max-height:80px; } 60%{ opacity:0; transform:translateX(24px); max-height:80px; margin-bottom:8px; } 100%{ opacity:0; transform:translateX(24px); max-height:0; margin-bottom:0; } }
+  .notif-dismiss{ position:absolute; top:50%; left:12px; transform:translateY(-50%); width:24px; height:24px; border-radius:50%; border:none; background:rgba(244,238,225,.06); color:var(--muted); font-size:15px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .15s ease, color .15s ease; }
+  .notif-dismiss:hover{ background:rgba(217,90,90,.22); color:#F2A5A5; }
+  .notif-head-actions{ display:flex; align-items:center; gap:10px; }
+  .notif-dismiss-all{ background:none; border:1px solid var(--line); border-radius:999px; padding:4px 12px; font-family:inherit; font-size:12px; color:var(--muted); cursor:pointer; transition:border-color .15s ease, color .15s ease; }
+  .notif-dismiss-all:hover{ border-color:#2FB6A8; color:var(--sand); }
+  .notif-empty{ text-align:center; color:var(--muted); font-size:13.5px; padding:22px 0 10px; }
   .notif-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; background:#D9A72A; }
   .notif-item.certificate .notif-dot{ background:#2FB6A8; }
   .notif-text{ font-size:13.5px; font-weight:600; }
@@ -712,18 +726,25 @@
   <div class="notif-overlay" id="notifOverlay">
     <div class="notif-panel" role="dialog" aria-label="التنبيهات">
       <div class="notif-head">
-        <h3>التنبيهات ({{ coop_notifications|length }})</h3>
-        <button type="button" class="notif-close" id="notifClose" aria-label="إغلاق">×</button>
+        <h3>التنبيهات (<span id="notifTotal">{{ coop_notifications|length }}</span>)</h3>
+        <div class="notif-head-actions">
+          <button type="button" class="notif-dismiss-all" id="notifDismissAll">تجاهل الكل</button>
+          <button type="button" class="notif-close" id="notifClose" aria-label="إغلاق">×</button>
+        </div>
       </div>
       {% for n in coop_notifications %}
-        <a class="notif-item {{ n.kind }}" href="{{ url_for('coop_dashboard') }}#req-{{ n.req_id }}">
-          <span class="notif-dot"></span>
-          <div>
-            <div class="notif-text">{{ n.text }}</div>
-            <div class="notif-time">{{ n.time }}</div>
-          </div>
-        </a>
+        <div class="notif-row" data-key="{{ n.key }}" style="animation-delay: {{ [0.1 + loop.index0 * 0.07, 0.4]|min }}s;">
+          <a class="notif-item {{ n.kind }}" href="{{ url_for('coop_dashboard') }}#req-{{ n.req_id }}">
+            <span class="notif-dot"></span>
+            <div>
+              <div class="notif-text">{{ n.text }}</div>
+              <div class="notif-time">{{ n.time }}</div>
+            </div>
+          </a>
+          <button type="button" class="notif-dismiss" title="تجاهل" aria-label="تجاهل التنبيه">×</button>
+        </div>
       {% endfor %}
+      <div class="notif-empty" id="notifEmpty" style="display:none;">لا توجد تنبيهات</div>
     </div>
   </div>
   <script>
@@ -731,23 +752,68 @@
       var open = document.getElementById('notifOpen');
       var overlay = document.getElementById('notifOverlay');
       var close = document.getElementById('notifClose');
+      var dismissAll = document.getElementById('notifDismissAll');
+      var totalEl = document.getElementById('notifTotal');
+      var emptyEl = document.getElementById('notifEmpty');
+      var DISMISS_URL = "{{ url_for('coop_dismiss_notifications') }}";
+      var changed = false;
       if (!open || !overlay) return;
+
+      function post(data, keepalive){
+        return fetch(DISMISS_URL, {
+          method: 'POST', keepalive: !!keepalive,
+          headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+          body: new URLSearchParams(data).toString()
+        });
+      }
+      function rows(){ return overlay.querySelectorAll('.notif-row:not(.removing)'); }
+      function refreshCount(){
+        var n = rows().length;
+        totalEl.textContent = n;
+        if (n === 0){ emptyEl.style.display = 'block'; dismissAll.style.display = 'none'; }
+      }
+      function removeRow(row){
+        row.classList.add('removing');
+        setTimeout(function(){ row.remove(); refreshCount(); }, 260);
+      }
       function openPanel(){ overlay.classList.remove('closing'); overlay.classList.add('open'); }
       function closePanel(){
         if (!overlay.classList.contains('open')) return;
         overlay.classList.remove('open'); overlay.classList.add('closing');
-        setTimeout(function(){ overlay.classList.remove('closing'); }, 180);
+        // لو تجاهلت شي، نحدّث الصفحة عشان الكرت (العدد والنص) يعكس الوضع الجديد
+        setTimeout(function(){ overlay.classList.remove('closing'); if (changed) window.location.reload(); }, 180);
       }
+
       open.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); openPanel(); });
       close.addEventListener('click', closePanel);
       overlay.addEventListener('click', function(e){ if (e.target === overlay) closePanel(); });
       document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closePanel(); });
-      // ضغطة على تنبيه: حركة ضغط قصيرة ثم الانتقال للطلب
+
+      // زر × على كل تنبيه: تجاهل هذا التنبيه فقط
+      overlay.querySelectorAll('.notif-dismiss').forEach(function(btn){
+        btn.addEventListener('click', function(e){
+          e.preventDefault(); e.stopPropagation();
+          var row = btn.closest('.notif-row');
+          post({key: row.getAttribute('data-key')});
+          changed = true;
+          removeRow(row);
+        });
+      });
+
+      // تجاهل الكل
+      dismissAll.addEventListener('click', function(){
+        post({all: '1'});
+        changed = true;
+        rows().forEach(function(r, i){ setTimeout(function(){ removeRow(r); }, i * 60); });
+      });
+
+      // ضغطة على تنبيه: تُحسب كأنك شفته (يتجاهل تلقائيًا)، مع حركة قصيرة ثم الانتقال للطلب
       overlay.querySelectorAll('.notif-item').forEach(function(item){
         item.addEventListener('click', function(e){
           if (e.ctrlKey || e.metaKey || e.shiftKey) return;
           e.preventDefault();
           item.classList.add('pressed');
+          post({key: item.closest('.notif-row').getAttribute('data-key')}, true);
           var href = item.getAttribute('href');
           setTimeout(function(){ window.location.href = href; }, 260);
         });
