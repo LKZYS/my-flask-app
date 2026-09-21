@@ -1,6 +1,8 @@
 import csv
 import hashlib
+import json
 import os
+import re
 import secrets
 from datetime import datetime, date, timedelta
 from flask import Flask, render_template, request, redirect, url_for, session, flash
@@ -19,6 +21,8 @@ USERS_FILE = os.path.join(BASE_DIR, "users.csv")
 TICKETS_FILE = os.path.join(BASE_DIR, "tickets.csv")
 TRAINING_FILE = os.path.join(BASE_DIR, "training_requests.csv")
 NOTIF_DISMISS_FILE = os.path.join(BASE_DIR, "notification_dismissals.csv")  # تنبيهات الفنيين اللي تم تجاهلها (لكل موظف على حدة)
+COOP_SETTINGS_FILE = os.path.join(BASE_DIR, "coop_settings.json")  # بيانات منسّق التدريب التعاوني اللي تظهر للمنشآت
+SUPPORT_SETTINGS_FILE = os.path.join(BASE_DIR, "support_settings.json")  # بيانات التواصل مع الدعم الفني اللي يعبّيها الموظفون وتظهر للطلاب
 
 TRAINING_DOCS_DIR = os.path.join(BASE_DIR, "static", "coop_docs")
 ALLOWED_DOC_EXT = {"pdf", "doc", "docx", "jpg", "jpeg", "png"}
@@ -29,6 +33,8 @@ STATUS_AWAITING = "بانتظار إصدار الخطاب"        # الطالب
 STATUS_COMPANY_PENDING = "قيد المراجعة عند المنشأة"  # الخطاب صدر والرابط عند المنشأة
 STATUS_COLLEGE_REJECTED = "مرفوض من الكلية"      # الكلية رفضت طلب الطالب قبل إصدار الخطاب
 CLOSED_TRAINING_STATUSES = ("تم القبول", "مرفوض", STATUS_COLLEGE_REJECTED)  # حالات مقفولة (قرار نهائي)
+TRAINING_COLUMNS = 27  # 25 عمود أساسي + last_edited_by + last_edited_at (سجل آخر تعديل من الموظف)
+EDITABLE_TRAINING_STATUSES = (STATUS_COMPANY_PENDING, "تم القبول", "مرفوض")  # الحالات اللي يقدر الموظف يعدّل بياناتها (الخطاب صدر)
 TRAINING_HIDE_AFTER = timedelta(hours=24)  # مدة بقاء الطلب المقفول ظاهرًا قبل ما يختفي وينتقل للأرشيف (يبقى محفوظًا بالملف)
 MAX_OPEN_STUDENT_REQUESTS = 3  # أقصى عدد طلبات "بانتظار الإصدار" لنفس الطالب بنفس الوقت
 
@@ -110,6 +116,19 @@ def fix_duplicate_ticket_ids():
     return fixed
 
 
+def _upgrade_training_header():
+    """يضيف عنوانَي last_edited_by / last_edited_at لصف العناوين في ملفات قديمة (لا يمس بقية الصفوف)."""
+    try:
+        with open(TRAINING_FILE, "r", encoding="utf-8") as f:
+            rows = list(csv.reader(f))
+    except OSError:
+        return
+    if rows and len(rows[0]) < TRAINING_COLUMNS and rows[0][:1] == ["id"]:
+        rows[0] = rows[0] + ["last_edited_by", "last_edited_at"][: TRAINING_COLUMNS - len(rows[0])]
+        with open(TRAINING_FILE, "w", newline="", encoding="utf-8") as f:
+            csv.writer(f).writerows(rows)
+
+
 def init_file():
     os.makedirs(AVATAR_DIR, exist_ok=True)
     os.makedirs(TRAINING_DOCS_DIR, exist_ok=True)
@@ -136,7 +155,10 @@ def init_file():
                 "end_date",
                 "completion_doc", "completion_status", "completion_submitted_at",
                 "completion_reviewed_at", "completion_reject_reason", "final_certificate_doc",
+                "last_edited_by", "last_edited_at",
             ])  # صف العناوين
+    else:
+        _upgrade_training_header()  # ملفات قديمة: نضيف عناوين أعمدة سجل التعديل
 
     if not os.path.exists(NOTIF_DISMISS_FILE):
         with open(NOTIF_DISMISS_FILE, "w", newline="", encoding="utf-8") as f:
@@ -242,6 +264,162 @@ def inject_avatar():
     filename = get_avatar_filename(email) if email else None
     avatar_url = url_for("static", filename=f"avatars/{filename}") if filename else None
     return {"current_avatar_url": avatar_url}
+
+
+def get_coop_contact():
+    """بيانات منسّق التدريب التعاوني اللي يعبّيها فريق الدعم من صفحة الإعدادات.
+    تُرجع {name, email, phone} — وتكون فاضية لو ما انحفظ شي بعد."""
+    empty = {"name": "", "email": "", "phone": ""}
+    try:
+        with open(COOP_SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return empty
+    if not isinstance(data, dict):
+        return empty
+    return {k: str(data.get(k) or "").strip() for k in empty}
+
+
+def save_coop_contact(name, email, phone):
+    tmp_path = COOP_SETTINGS_FILE + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump({"name": name, "email": email, "phone": phone}, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, COOP_SETTINGS_FILE)  # كتابة ذرّية: ما يتلف الملف لو انقطع الحفظ
+
+
+@app.context_processor
+def inject_coop_contact():
+    """يوفّر coop_contact() لكل القوالب (تُقرأ البيانات فقط إذا استُدعيت داخل القالب)."""
+    return {"coop_contact": get_coop_contact}
+
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_PHONE_RE = re.compile(r"^\+?[0-9\s\-()]{7,20}$")
+_ARABIC_DIGITS = str.maketrans("٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹", "01234567890123456789")
+
+
+@app.route("/coop/settings", methods=["GET", "POST"])
+def coop_settings():
+    """صفحة يعبّي فيها فريق الدعم بيانات منسّق التدريب التعاوني (اسم + بريد و/أو جوال)،
+    وتظهر هذي البيانات للمنشآت في صفحة الرابط (coop_verify)."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+    contact = get_coop_contact()
+    error = None
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        phone = request.form.get("phone", "").strip().translate(_ARABIC_DIGITS)
+        contact = {"name": name, "email": email, "phone": phone}
+        if not name:
+            error = "اكتب اسم المنسّق"
+        elif len(name) > 80:
+            error = "الاسم طويل، الحد الأقصى 80 حرفًا"
+        elif not email and not phone:
+            error = "اكتب بريدًا إلكترونيًا أو رقم جوال على الأقل ليتمكن المنشآت من التواصل"
+        elif email and (len(email) > 120 or not _EMAIL_RE.match(email)):
+            error = "صيغة البريد الإلكتروني غير صحيحة"
+        elif phone and not _PHONE_RE.match(phone):
+            error = "رقم الجوال غير صحيح (أرقام فقط، ويمكن أن يبدأ بـ +)"
+        else:
+            save_coop_contact(name, email, phone)
+            flash("تم حفظ بيانات المنسّق، وستظهر للمنشآت في صفحة الرابط.", "success")
+            return redirect(url_for("coop_settings"))
+    return render_template("coop_settings.html", contact=contact, error=error)
+
+
+SUPPORT_FIELDS = ("phone", "whatsapp", "email", "location", "hours", "note")
+SUPPORT_DEFAULT_HOURS = "الأحد – الخميس، من الساعة 8 صباحًا إلى 4 مساءً"
+
+
+def get_support_contact():
+    """بيانات التواصل مع الدعم الفني اللي يعبّيها فريق الدعم من صفحة الإعدادات.
+    تُرجع dict فيه (phone, whatsapp, email, location, hours, note) — وتكون فاضية لو ما انحفظ شي بعد."""
+    empty = {k: "" for k in SUPPORT_FIELDS}
+    try:
+        with open(SUPPORT_SETTINGS_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except FileNotFoundError:
+        return {**empty, "hours": SUPPORT_DEFAULT_HOURS}  # أول مرة: نعبّي الدوام المعتاد كقيمة مبدئية
+    except (OSError, ValueError):
+        return empty
+    if not isinstance(data, dict):
+        return empty
+    return {k: str(data.get(k) or "").strip() for k in empty}
+
+
+def save_support_contact(contact):
+    tmp_path = SUPPORT_SETTINGS_FILE + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump({k: contact.get(k, "") for k in SUPPORT_FIELDS}, f, ensure_ascii=False, indent=2)
+    os.replace(tmp_path, SUPPORT_SETTINGS_FILE)  # كتابة ذرّية: ما يتلف الملف لو انقطع الحفظ
+
+
+def whatsapp_link(number):
+    """يحوّل رقم الواتساب لرابط wa.me (يفترض رقم سعودي لو بدأ بـ 0 أو 5)."""
+    digits = re.sub(r"\D", "", number or "")
+    if not digits:
+        return ""
+    if digits.startswith("00"):
+        digits = digits[2:]
+    elif digits.startswith("0"):
+        digits = "966" + digits[1:]
+    elif len(digits) == 9 and digits.startswith("5"):
+        digits = "966" + digits
+    return f"https://wa.me/{digits}"
+
+
+def phone_href(number):
+    """رابط tel: نظيف (يحافظ على + في البداية ويشيل المسافات والشرطات)."""
+    number = (number or "").strip()
+    if not number:
+        return ""
+    plus = "+" if number.startswith("+") else ""
+    return "tel:" + plus + re.sub(r"\D", "", number)
+
+
+@app.route("/support/settings", methods=["GET", "POST"])
+def support_settings():
+    """صفحة يعبّي فيها فريق الدعم بيانات التواصل (جوال / واتساب / بريد / موقع المكتب / أوقات الدوام)،
+    وتظهر للطلاب في صفحة الدعم الفني (/support) اللي يفتحها زر \"الدعم الفني\" من لوحة الطالب."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+    contact = get_support_contact()
+    error = None
+    if request.method == "POST":
+        contact = {
+            "phone": request.form.get("phone", "").strip().translate(_ARABIC_DIGITS),
+            "whatsapp": request.form.get("whatsapp", "").strip().translate(_ARABIC_DIGITS),
+            "email": request.form.get("email", "").strip(),
+            "location": request.form.get("location", "").strip(),
+            "hours": request.form.get("hours", "").strip(),
+            "note": request.form.get("note", "").strip(),
+        }
+        if not (contact["phone"] or contact["whatsapp"] or contact["email"]):
+            error = "اكتب رقم جوال أو واتساب أو بريدًا إلكترونيًا على الأقل ليتمكن الطلاب من التواصل"
+        elif contact["phone"] and not _PHONE_RE.match(contact["phone"]):
+            error = "رقم الجوال غير صحيح (أرقام فقط، ويمكن أن يبدأ بـ +)"
+        elif contact["whatsapp"] and not _PHONE_RE.match(contact["whatsapp"]):
+            error = "رقم الواتساب غير صحيح (أرقام فقط، ويمكن أن يبدأ بـ +)"
+        elif contact["email"] and (len(contact["email"]) > 120 or not _EMAIL_RE.match(contact["email"])):
+            error = "صيغة البريد الإلكتروني غير صحيحة"
+        elif len(contact["location"]) > 120:
+            error = "وصف الموقع طويل، الحد الأقصى 120 حرفًا"
+        elif len(contact["hours"]) > 100:
+            error = "أوقات الدوام طويلة، الحد الأقصى 100 حرف"
+        elif len(contact["note"]) > 200:
+            error = "الملاحظة طويلة، الحد الأقصى 200 حرف"
+        else:
+            save_support_contact(contact)
+            flash("تم حفظ بيانات الدعم الفني، وستظهر للطلاب في صفحة الدعم الفني.", "success")
+            return redirect(url_for("support_settings"))
+    return render_template(
+        "support_settings.html",
+        contact=contact,
+        error=error,
+        wa_link=whatsapp_link(contact["whatsapp"]),
+        phone_href=phone_href(contact["phone"]),
+    )
 
 
 def require_student():
@@ -841,6 +1019,10 @@ def coop_issue_letter(req_id):
         return redirect(url_for("coop_dashboard"))
 
     if request.method == "POST":
+        if request.form.get("edit_version", "") != (row[26] or ""):
+            flash("الطالب عدّل بيانات طلبه وأنت تراجعه — حدّثنا البيانات لك، راجعها وأرفق المستندات ثم أصدر الخطاب")
+            return render_template("coop_issue.html", user=session["user"], req=row, form={})
+
         company_name = " ".join(request.form.get("company_name", "").split())
         company_email = request.form.get("company_email", "").strip()
         position_title = " ".join(request.form.get("position_title", "").split())
@@ -863,8 +1045,11 @@ def coop_issue_letter(req_id):
 
         result = issue_training_letter(
             req_id, company_name, company_email, position_title,
-            session.get("email", ""), documents=saved_docs,
+            session.get("email", ""), documents=saved_docs, expected_edit_at=row[26] or "",
         )
+        if isinstance(result, dict) and result.get("conflict"):
+            flash("الطالب عدّل طلبه قبل لحظات — راجع البيانات المحدّثة وأعد المحاولة")
+            return redirect(url_for("coop_issue_letter", req_id=req_id))
         if not result:
             flash("ما قدرنا نصدر الخطاب — الطلب تغيّرت حالته")
             return redirect(url_for("coop_dashboard"))
@@ -892,6 +1077,83 @@ def coop_college_reject(req_id):
     return redirect(url_for("coop_dashboard"))
 
 
+@app.route("/coop/<int:req_id>/edit", methods=["GET", "POST"])
+def coop_edit_request(req_id):
+    """الموظف يعدّل طلب تدريب صدر له خطاب، لو الطالب أو الجهة سجّلوا شي غلط (اسم الجهة، الإيميل، المسمى،
+    وبعد قبول الجهة: المشرف وتواريخ التدريب). كل تعديل يُسجَّل باسم الموظف."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+
+    row = get_training_request_by_id(req_id)
+    if not row or row[7] not in EDITABLE_TRAINING_STATUSES:
+        flash("هذا الطلب ما يمكن تعديله (يعدّل الطلب بعد إصدار الخطاب فقط)")
+        return redirect(url_for("coop_dashboard"))
+
+    is_accepted = row[7] == "تم القبول"
+    can_reopen = row[7] != STATUS_COMPANY_PENDING and not (row[19] or row[20] or row[24])
+
+    if request.method == "POST":
+        company_name = " ".join(request.form.get("company_name", "").split())
+        company_email = request.form.get("company_email", "").strip()
+        position_title = " ".join(request.form.get("position_title", "").split())
+        supervisor_name = start_date = end_date = None
+        error = None
+
+        if not company_name:
+            error = "لازم تكتب اسم الجهة"
+        elif len(company_name) > 100 or len(position_title) > 100:
+            error = "اسم الجهة أو المسمى طويل زيادة (الحد 100 حرف)"
+        elif company_email and not _valid_email(company_email):
+            error = "صيغة إيميل الجهة غير صحيحة"
+        elif is_accepted:
+            supervisor_name = " ".join(request.form.get("supervisor_name", "").split())
+            start_date = request.form.get("start_date", "").strip()
+            end_date = request.form.get("end_date", "").strip()
+            if not supervisor_name:
+                error = "لازم تكتب اسم المشرف الميداني"
+            elif len(supervisor_name) > 100:
+                error = "اسم المشرف طويل زيادة (الحد 100 حرف)"
+            elif not _valid_date(start_date) or not _valid_date(end_date):
+                error = "صيغة التاريخ غير صحيحة"
+            elif start_date and end_date and end_date < start_date:
+                error = "تاريخ نهاية التدريب لازم يكون بعد تاريخ البداية"
+
+        if error:
+            flash(error)
+            return render_template("coop_edit.html", user=session["user"], req=row, form=request.form,
+                                   is_accepted=is_accepted, can_reopen=can_reopen)
+
+        if update_training_details(req_id, session.get("email", ""), company_name, company_email, position_title,
+                                   supervisor_name, start_date, end_date):
+            flash("تم حفظ التعديلات", "success")
+        else:
+            flash("ما قدرنا نحفظ — تغيّرت حالة الطلب")
+        return redirect(url_for("coop_edit_request", req_id=req_id))
+
+    return render_template("coop_edit.html", user=session["user"], req=row, form={},
+                           is_accepted=is_accepted, can_reopen=can_reopen)
+
+
+@app.route("/coop/<int:req_id>/reopen", methods=["POST"])
+def coop_reopen_request(req_id):
+    """تجديد رابط المنشأة، أو إعادة فتح قرارها لو قبلت/رفضت بالغلط — يتولّد رابط جديد والقديم يوقف."""
+    if session.get("role") != "it":
+        return redirect(url_for("it_login"))
+
+    result = reopen_training_request(req_id, session.get("email", ""))
+    if not result:
+        flash("ما قدرنا نعيد فتح الطلب — تغيّرت حالته")
+        return redirect(url_for("coop_dashboard"))
+    if result.get("error") == "completion":
+        flash("ما نقدر نعيد فتح القرار لأن الطالب رفع شهادة إتمام لهذا الطلب — تقدر تعدّل البيانات فقط")
+        return redirect(url_for("coop_edit_request", req_id=req_id))
+
+    verify_link = url_for("coop_verify", token=result["token"], _external=True)
+    label = "تم تجديد رابط المنشأة" if result["kind"] == "renewed" else "تمت إعادة فتح الطلب للمنشأة"
+    flash(f"{label} — الرابط الجديد: {verify_link} (الرابط القديم ما عاد يشتغل)", "success")
+    return redirect(url_for("coop_dashboard"))
+
+
 @app.route("/my-coop")
 def my_coop():
     """صفحة الطالب لمتابعة حالة طلبات التدريب التعاوني الخاصة به."""
@@ -903,6 +1165,59 @@ def my_coop():
         token = r.pop("token")
         r["link"] = url_for("coop_verify", token=token, _external=True) if token else ""
     return render_template("my_coop.html", user=session["user"], requests=my_requests)
+
+
+@app.route("/my-coop/<int:req_id>/edit", methods=["GET", "POST"])
+def coop_student_edit(req_id):
+    """الطالب يعدّل طلبه (اسم الجهة، المسمى، الإيميل، الملاحظات) طالما الكلية ما أصدرت الخطاب بعد."""
+    guard = require_student()
+    if guard:
+        return guard
+
+    email = session.get("email", "")
+    row = get_training_request_by_id(req_id)
+    if not row or row[1].strip().lower() != email.strip().lower():
+        flash("ما قدرنا نلقى هذا الطلب")
+        return redirect(url_for("my_coop"))
+    if row[7] != STATUS_AWAITING:
+        flash("ما تقدر تعدّل الطلب بعد ما تعالجه الكلية — تواصل معها لو فيه خطأ")
+        return redirect(url_for("my_coop"))
+
+    if request.method == "POST":
+        company_name = " ".join(request.form.get("company_name", "").split())
+        position_title = " ".join(request.form.get("position_title", "").split())
+        company_email = request.form.get("company_email", "").strip()
+        notes = " ".join(request.form.get("notes", "").split())
+
+        error = None
+        if not company_name:
+            error = "لازم تكتب اسم الجهة"
+        elif len(company_name) > 100 or len(position_title) > 100:
+            error = "اسم الجهة أو المسمى طويل زيادة (الحد 100 حرف)"
+        elif company_email and not _valid_email(company_email):
+            error = "صيغة إيميل الجهة غير صحيحة"
+        elif len(notes) > 500:
+            error = "الملاحظات طويلة زيادة (الحد 500 حرف)"
+        elif find_duplicate_active_request(email, company_name, exclude_id=req_id):
+            error = "عندك طلب نشط لنفس الجهة بالفعل، تابعه من صفحة الخدمة"
+        if error:
+            flash(error)
+            return render_template("coop_request.html", user=session["user"], form=request.form, editing=True, req_id=req_id)
+
+        unchanged = (
+            company_name == row[4] and position_title == row[6]
+            and company_email == row[5] and notes == row[16]
+        )
+        if unchanged:
+            flash("ما تغيّر شي في الطلب", "success")
+        elif update_student_training_request(req_id, email, company_name, company_email, position_title, notes):
+            flash("تم تعديل طلبك، ويوصل التحديث لمسؤول التدريب", "success")
+        else:
+            flash("ما قدرنا نحفظ التعديل — الكلية عالجت الطلب قبل لحظات")
+        return redirect(url_for("my_coop"))
+
+    current = {"company_name": row[4], "position_title": row[6], "company_email": row[5], "notes": row[16]}
+    return render_template("coop_request.html", user=session["user"], form=current, editing=True, req_id=req_id)
 
 
 @app.route("/coop/<int:req_id>/complete", methods=["POST"])
@@ -1258,7 +1573,7 @@ def create_training_request(student_email, company_name, company_email, position
 
 
 def _pad_training_row(row):
-    while len(row) < 25:
+    while len(row) < TRAINING_COLUMNS:
         row.append("")
     return row
 
@@ -1434,6 +1749,8 @@ def get_coop_notifications(staff_email=None, include_dismissed=False):
     for r in get_all_training_requests():
         if r[7] == "تم القبول" and r[20] == COMPLETION_PENDING:
             kind, text, when = "certificate", f"الطالب {r[2]} أرفق شهادة الإتمام", (r[21] or r[13])
+        elif r[7] == STATUS_AWAITING and r[26]:
+            kind, text, when = "edited_request", f"الطالب {r[2]} عدّل بيانات طلب التدريب", r[26]
         elif r[7] == STATUS_AWAITING:
             kind, text, when = "new_request", f"الطالب {r[2]} قدّم طلب تدريب جديد", r[10]
         else:
@@ -1507,6 +1824,38 @@ def create_student_training_request(student_email, company_name, company_email, 
     return {"id": next_id}
 
 
+def find_duplicate_active_request(student_email, company_name, exclude_id=None):
+    """هل عند الطالب طلب نشط ثاني لنفس الجهة؟ (نفس قاعدة منع التكرار وقت التقديم، مع استثناء الطلب اللي يعدّله)."""
+    email_key = student_email.strip().lower()
+    company_key = _normalize_company(company_name)
+    for row in get_all_training_requests():
+        if row[1].strip().lower() != email_key or (exclude_id is not None and row[0] == str(exclude_id)):
+            continue
+        active = (
+            row[7] in (STATUS_AWAITING, "تم القبول")
+            or (row[7] == STATUS_COMPANY_PENDING and not is_training_link_expired(row))
+        )
+        if active and _normalize_company(row[4]) == company_key:
+            return True
+    return False
+
+
+def update_student_training_request(req_id, student_email, company_name, company_email, position_title, notes):
+    """الطالب يعدّل طلبه قبل ما تصدر الكلية الخطاب فقط (بانتظار الإصدار). يسجّل وقت التعديل عشان يوصل تنبيه للموظف
+    ونكشف التعارض لو الموظف كان فاتح نموذج الإصدار. يرجّع True أو None لو الطلب مو للطالب أو تغيّرت حالته."""
+    def updater(row):
+        if row[7] != STATUS_AWAITING or row[1].strip().lower() != student_email.strip().lower():
+            return None
+        row[4] = company_name
+        row[5] = company_email
+        row[6] = position_title
+        row[16] = notes
+        row[25] = student_email
+        row[26] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        return True
+    return _update_training_row(req_id, updater)
+
+
 def _update_training_row(req_id, updater):
     """يقرأ الملف كاملًا ويطبّق updater على صف الطلب المطلوب فقط ثم يحفظ.
     updater يستقبل الصف (بعد تعبئته للطول الكامل) ويعدّله، ويرجّع نتيجة العملية.
@@ -1529,12 +1878,15 @@ def _update_training_row(req_id, updater):
     return result
 
 
-def issue_training_letter(req_id, company_name, company_email, position_title, issued_by, documents=None):
+def issue_training_letter(req_id, company_name, company_email, position_title, issued_by, documents=None, expected_edit_at=None):
     """يحوّل طلب الطالب من "بانتظار إصدار الخطاب" إلى "قيد المراجعة عند المنشأة"،
-    ويولّد رمز الوصول للمنشأة. يرجّع {"token": ...} أو None لو الطلب ما عاد متاح."""
+    ويولّد رمز الوصول للمنشأة. يرجّع {"token": ...} أو None لو الطلب ما عاد متاح،
+    أو {"conflict": True} لو الطالب عدّل طلبه بعد ما فتح الموظف نموذج الإصدار (expected_edit_at = آخر تعديل شافه الموظف)."""
     def updater(row):
         if row[7] != STATUS_AWAITING:
             return None
+        if expected_edit_at is not None and (row[26] or "") != expected_edit_at:
+            return {"conflict": True}
         now = datetime.now()
         token = secrets.token_urlsafe(24)
         row[4] = company_name
@@ -1546,6 +1898,8 @@ def issue_training_letter(req_id, company_name, company_email, position_title, i
         row[10] = now.strftime("%Y-%m-%d %H:%M")
         row[14] = issued_by
         row[15] = ",".join(documents) if documents else ""
+        row[25] = ""  # نصفّر سجل "آخر تعديل" (كان تعديل الطالب قبل الإصدار) عشان ما يظهر كأنه تعديل موظف
+        row[26] = ""
         return {"token": token}
     return _update_training_row(req_id, updater)
 
@@ -1628,6 +1982,66 @@ def decide_training_request(token, decision, supervisor_name="", start_date="", 
             writer.writerows(rows)
 
     return result
+
+
+def _valid_date(value):
+    """تاريخ بصيغة YYYY-MM-DD أو فاضي."""
+    if not value:
+        return True
+    try:
+        datetime.strptime(value, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
+
+
+def update_training_details(req_id, editor_email, company_name, company_email, position_title,
+                            supervisor_name=None, start_date=None, end_date=None):
+    """الموظف يصحّح بيانات طلب صدر له خطاب (غلط من الطالب أو من الجهة). بيانات الجهة تتعدّل بكل الحالات القابلة
+    للتعديل، والمشرف والتواريخ بس لو الجهة قبلت الطالب. يسجّل مين عدّل ومتى. يرجّع True أو None لو الحالة ما تسمح."""
+    def updater(row):
+        if row[7] not in EDITABLE_TRAINING_STATUSES:
+            return None
+        row[4] = company_name
+        row[5] = company_email
+        row[6] = position_title
+        if row[7] == "تم القبول" and supervisor_name is not None:
+            row[11] = supervisor_name
+            row[12] = start_date or ""
+            row[18] = end_date or ""
+        row[25] = editor_email
+        row[26] = datetime.now().strftime("%Y-%m-%d %H:%M")
+        return True
+    return _update_training_row(req_id, updater)
+
+
+def reopen_training_request(req_id, editor_email):
+    """يولّد رابطًا جديدًا للمنشأة ويلغي القديم.
+    - الطلب قيد المراجعة عند المنشأة (رابط منتهي أو انرسل لجهة غلط): تجديد الرابط.
+    - الجهة قبلت/رفضت بالغلط: إعادة فتح القرار (يرجع "قيد المراجعة عند المنشأة" وتُمسح بيانات القرار السابق).
+      ما تنفع لو الطالب رفع شهادة إتمام، لأن القرار صار مبني عليه شي بعده.
+    يرجّع {"token", "kind"} أو {"error": "completion"} أو None لو الحالة ما تسمح."""
+    def updater(row):
+        status = row[7]
+        if status not in EDITABLE_TRAINING_STATUSES:
+            return None
+        if status != STATUS_COMPANY_PENDING and (row[19] or row[20] or row[24]):
+            return {"error": "completion"}
+        now = datetime.now()
+        kind = "renewed" if status == STATUS_COMPANY_PENDING else "reopened"
+        token = secrets.token_urlsafe(24)
+        row[7] = STATUS_COMPANY_PENDING
+        row[8] = token
+        row[9] = (now + timedelta(days=TRAINING_LINK_VALID_DAYS)).strftime("%Y-%m-%d %H:%M")
+        if kind == "reopened":
+            row[11] = ""   # supervisor_name
+            row[12] = ""   # start_date
+            row[13] = ""   # decided_at
+            row[18] = ""   # end_date
+        row[25] = editor_email
+        row[26] = now.strftime("%Y-%m-%d %H:%M")
+        return {"token": token, "kind": kind}
+    return _update_training_row(req_id, updater)
 
 
 def update_ticket_status(ticket_id, status, handler_email=""):
@@ -1746,6 +2160,7 @@ def dashboard():
         total_tickets=total_tickets,
         open_tickets=open_tickets,
         resolved_tickets=resolved_tickets,
+        support_hours=get_support_contact()["hours"],
     )
 
 
@@ -1763,6 +2178,22 @@ def intro_meeting():
     if guard:
         return guard
     return render_template("intro_meeting.html", user=session["user"])
+
+
+@app.route("/support")
+def support():
+    guard = require_student()
+    if guard:
+        return guard
+    contact = get_support_contact()
+    return render_template(
+        "support.html",
+        user=session["user"],
+        contact=contact,
+        wa_link=whatsapp_link(contact["whatsapp"]),
+        phone_href=phone_href(contact["phone"]),
+        has_contact=any(contact[k] for k in ("phone", "whatsapp", "email", "location")),
+    )
 
 
 @app.route("/profile", methods=["GET", "POST"])

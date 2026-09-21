@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>التدريب التعاوني | إصدار خطاب لطلب طالب</title>
+<title>التدريب التعاوني | تعديل طلب</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -99,6 +99,25 @@
   @media (prefers-reduced-motion: reduce){
     .topbar, .page-head .eyebrow, .page-head h1, .page-head p, .student-box, form, .field, .submit-btn{ animation:none !important; }
   }
+
+  .field input[type="date"]{ color-scheme:dark; }
+  .row2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:520px){ .row2{ grid-template-columns:1fr; } }
+  .sec-title{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:15px; margin:4px 0 14px; color:var(--teal); }
+  .box{ margin-top:22px; padding:22px 24px; border-radius:18px; background:var(--panel); border:1.5px solid var(--line); animation:fadeUp .7s ease .5s both; }
+  .box h2{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:16px; margin-bottom:8px; }
+  .box p{ font-size:13px; color:var(--muted); line-height:1.8; margin-bottom:14px; }
+  .box.warn{ border-color:rgba(217,167,42,.4); }
+  .box.warn h2{ color:#E8C97A; }
+  .ghost-btn{
+    font-family:inherit; font-size:13.5px; font-weight:700; cursor:pointer; padding:11px 20px; border-radius:10px;
+    color:#E8C97A; background:rgba(217,167,42,.12); border:1px solid rgba(217,167,42,.45); transition:background .15s ease;
+  }
+  .ghost-btn:hover{ background:rgba(217,167,42,.22); }
+  .badge{ display:inline-block; padding:3px 12px; border-radius:20px; font-size:12px; font-weight:700; }
+  .badge.pending{ background:rgba(217,167,42,.14); color:#E8C97A; border:1px solid rgba(217,167,42,.4); }
+  .badge.accepted{ background:rgba(46,125,91,.16); color:#8FE3B8; border:1px solid rgba(46,125,91,.4); }
+  .badge.rejected{ background:rgba(196,98,63,.16); color:#F0A98E; border:1px solid rgba(196,98,63,.4); }
 </style>
 </head>
 <body>
@@ -111,8 +130,8 @@
   <main class="content">
     <div class="page-head">
       <span class="eyebrow">التدريب التعاوني</span>
-      <h1>إصدار خطاب لطلب طالب</h1>
-      <p>راجع الجهة اللي حددها الطالب وكمّل بياناتها. بعد الإصدار بيتولّد رابط آمن ترسله للجهة عشان تقبل أو ترفض.</p>
+      <h1>تعديل طلب تدريب</h1>
+      <p>صحّح البيانات لو الطالب أو الجهة سجّلوا شي غلط. كل تعديل يُسجَّل باسمك مع الوقت.</p>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
@@ -126,12 +145,17 @@
     <div class="student-box">
       <div class="f"><b>الطالب</b>{{ req[2] }}</div>
       <div class="f"><b>الرقم التدريبي</b>{{ req[3] }}</div>
-      <div class="f"><b>تاريخ الطلب</b>{{ req[10] }}</div>
-      {% if req[16] %}<div class="f wide"><b>ملاحظات الطالب</b>{{ req[16] }}</div>{% endif %}
+      <div class="f"><b>الحالة الحالية</b>
+        {% if req[7] == 'تم القبول' %}<span class="badge accepted">✓ تم القبول</span>
+        {% elif req[7] == 'مرفوض' %}<span class="badge rejected">مرفوض من الجهة</span>
+        {% else %}<span class="badge pending">قيد المراجعة عند المنشأة</span>{% endif %}
+      </div>
+      <div class="f"><b>تاريخ الإصدار</b>{{ req[10] }}</div>
+      {% if req[25] %}<div class="f wide"><b>آخر تعديل</b>{{ req[25] }} — {{ req[26] }}</div>{% endif %}
     </div>
 
-    <form method="POST" enctype="multipart/form-data">
-      <input type="hidden" name="edit_version" value="{{ req[26] }}">
+    <form method="POST">
+      <div class="sec-title">بيانات الجهة</div>
       <div class="field">
         <label for="company_name">اسم الجهة</label>
         <input type="text" name="company_name" id="company_name" maxlength="100" value="{{ form.get('company_name', req[4]) }}" required>
@@ -139,22 +163,59 @@
       <div class="field">
         <label for="company_email">إيميل مسؤول التوظيف بالجهة <span style="font-weight:400; color:var(--muted); font-size:12px;">(اختياري)</span></label>
         <input type="email" name="company_email" id="company_email" value="{{ form.get('company_email', req[5]) }}" placeholder="hr@company.com">
-        <p class="hint">رابط القبول/الرفض بيتولّد تلقائيًا وتقدر ترسله للجهة بأي طريقة، والإيميل هنا للتوثيق فقط.</p>
       </div>
       <div class="field">
         <label for="position_title">المسمى الوظيفي / القسم <span style="font-weight:400; color:var(--muted); font-size:12px;">(اختياري)</span></label>
         <input type="text" name="position_title" id="position_title" maxlength="100" value="{{ form.get('position_title', req[6]) }}">
+        <p class="hint">التعديل يغيّر البيانات المسجّلة فقط، وما يرسل شي للجهة ولا يغيّر رابطها.</p>
       </div>
-      <div class="field">
-        <label for="documents">إرفاق مستندات</label>
-        <input type="file" name="documents" id="documents" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
-        <p class="hint">خطاب التدريب الرسمي، السيرة الذاتية... حتى 5 ملفات (PDF, Word, أو صورة)، كل ملف أقل من 8 ميجابايت.</p>
-      </div>
+
+      {% if is_accepted %}
+        <div class="sec-title" style="margin-top:26px;">بيانات التدريب (حسب قرار الجهة)</div>
+        <div class="field">
+          <label for="supervisor_name">اسم المشرف الميداني</label>
+          <input type="text" name="supervisor_name" id="supervisor_name" maxlength="100" value="{{ form.get('supervisor_name', req[11]) }}" required>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label for="start_date">تاريخ بداية التدريب</label>
+            <input type="date" name="start_date" id="start_date" value="{{ form.get('start_date', req[12]) }}">
+          </div>
+          <div class="field">
+            <label for="end_date">تاريخ نهاية التدريب</label>
+            <input type="date" name="end_date" id="end_date" value="{{ form.get('end_date', req[18]) }}">
+          </div>
+        </div>
+      {% endif %}
+
       <button type="submit" class="submit-btn">
-        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M22 2L11 13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        إصدار الخطاب وتوليد الرابط
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        حفظ التعديلات
       </button>
     </form>
+
+    {% if req[7] == 'قيد المراجعة عند المنشأة' %}
+      <div class="box warn">
+        <h2>تجديد رابط المنشأة</h2>
+        <p>لو الرابط انتهى، أو انرسل لجهة غلط، ولّد رابط جديد. <b>الرابط القديم يوقف فورًا</b> وتحتاج ترسل الجديد للجهة.</p>
+        <form method="POST" action="{{ url_for('coop_reopen_request', req_id=req[0]) }}" style="padding:0; border:none; background:none; animation:none;" onsubmit="return confirm('بيتولّد رابط جديد ويوقف الرابط القديم. تكمّل؟');">
+          <button type="submit" class="ghost-btn">تجديد الرابط</button>
+        </form>
+      </div>
+    {% elif can_reopen %}
+      <div class="box warn">
+        <h2>الجهة قرّرت بالغلط؟ أعد فتح القرار</h2>
+        <p>يرجع الطلب "قيد المراجعة عند المنشأة" ويتولّد رابط جديد تختار فيه الجهة قرارها من جديد. <b>يُمسح المشرف والتواريخ المسجلة</b> والرابط القديم يوقف.</p>
+        <form method="POST" action="{{ url_for('coop_reopen_request', req_id=req[0]) }}" style="padding:0; border:none; background:none; animation:none;" onsubmit="return confirm('بيرجع الطلب للجهة برابط جديد وتنمسح بيانات قرارها الحالي. تكمّل؟');">
+          <button type="submit" class="ghost-btn">إعادة فتح القرار للجهة</button>
+        </form>
+      </div>
+    {% else %}
+      <div class="box">
+        <h2>إعادة فتح القرار</h2>
+        <p style="margin-bottom:0;">ما تنفع هنا لأن الطالب رفع شهادة إتمام لهذا الطلب. تقدر تعدّل البيانات أعلاه فقط.</p>
+      </div>
+    {% endif %}
   </main>
 
 </body>

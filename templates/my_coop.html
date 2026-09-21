@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>College IT Support | خدمة التدريب التعاوني</title>
+<title>College Student Portal | خدمة التدريب التعاوني</title>
 <script>
   (function(){
     if (localStorage.getItem('theme') === 'dark') {
@@ -43,6 +43,15 @@
     transition:background .15s ease;
   }
   .new-btn:hover{ background:#1B322C; }
+  .edit-btn{
+    display:inline-block; margin-top:12px; text-decoration:none; font-size:13px; font-weight:600;
+    color:var(--ink); background:transparent; border:1.5px solid var(--line); border-radius:8px; padding:8px 16px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .edit-btn:hover{ border-color:var(--gold); background:rgba(200,162,74,.08); }
+  .edit-hint{ font-size:12px; color:var(--muted); margin-inline-start:10px; }
+  html[data-theme="dark"] .edit-btn{ color:#EDE7D8; border-color:#2A3A32; }
+  html[data-theme="dark"] .edit-btn:hover{ border-color:var(--gold); }
   .flash{
     background:#FBEAE3; border:1px solid #C4623F; color:#8A3B22;
     font-size:14px; padding:12px 16px; border-radius:8px; margin-bottom:20px;
@@ -375,6 +384,8 @@
 
             {% if r.state == 'awaiting' %}
               <div class="note">طلبك وصل للكلية وبانتظار إصدار الخطاب الموجّه للجهة. بيتحدّث الوضع هنا بمجرد ما يصدره مسؤول التدريب.</div>
+              <a class="edit-btn" href="{{ url_for('coop_student_edit', req_id=r.id) }}">✏️ تعديل الطلب</a>
+              <span class="edit-hint">تقدر تعدّل الجهة أو المسمى أو الملاحظات قبل إصدار الخطاب.</span>
             {% elif r.state == 'college_rejected' %}
               <div class="note bad">رفضت الكلية هذا الطلب.{% if r.college_reject_reason %} السبب: {{ r.college_reject_reason }}{% endif %} تقدر تقدّم طلب جديد لجهة ثانية.</div>
             {% elif r.state == 'pending' %}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>College IT Support | لوحة الفني</title>
+<title>College Student Portal | لوحة الفني</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root{ --ink:#0F1A18; --ink-soft:#16241F; --gold:#C8A24A; --sand:#F4EEE1; --line:rgba(244,238,225,.14); --muted:rgba(244,238,225,.55); }
@@ -301,6 +301,7 @@
     background:linear-gradient(150deg, rgba(200,162,74,.14), rgba(200,162,74,.03));
   }
   .card.c-blue{ --accent:#7FA8D9; --accent-bg:linear-gradient(135deg, rgba(105,150,199,.28), rgba(105,150,199,.06)); --accent-border:rgba(105,150,199,.4); --accent-shadow:rgba(105,150,199,.22); }
+  .card.c-purple{ --accent:#8B5FBF; --accent-bg:linear-gradient(135deg, rgba(139,95,191,.3), rgba(139,95,191,.08)); --accent-border:rgba(139,95,191,.4); --accent-shadow:rgba(139,95,191,.22); }
   .card.c-teal{ --accent:#2FB6A8; --accent-bg:linear-gradient(135deg, rgba(47,182,168,.3), rgba(47,182,168,.08)); --accent-border:rgba(47,182,168,.4); --accent-shadow:rgba(47,182,168,.22);
     background:linear-gradient(150deg, rgba(47,182,168,.14), rgba(47,182,168,.03));
   }
@@ -471,7 +472,7 @@
         </div>
         <span class="name">{{ user }}</span>
       </a>
-      <span class="logo">College IT Support</span>
+      <span class="logo">College Student Portal</span>
     </div>
     <button class="menu-btn" id="menuBtn" aria-label="القائمة"><span></span></button>
   </div>
@@ -553,7 +554,7 @@
         <div class="hero-blob-gold"></div>
         <div class="hero-blob-teal"></div>
         <div class="hero-text">
-          <span class="eyebrow">فريق الدعم الفني · College IT Support</span>
+          <span class="eyebrow">فريق الدعم الفني · College Student Portal</span>
           <h1>مرحبًا، {{ user }}</h1>
           <p>تابع بلاغات الطلاب وحدّث حالتها من مكان واحد. هذي نظرة سريعة على الوضع الحالي.</p>
         </div>
@@ -651,7 +652,13 @@
           <div class="title">سجل طلبات التدريب المؤرشفة</div>
           <div class="sub">{{ coop_archive_count }} طلبات تدريب مؤرشفة</div>
         </a>
-        <a href="{{ url_for('it_archive') }}" class="card" style="grid-column:1 / -1;">
+        <a href="{{ url_for('support_settings') }}" class="card c-purple">
+          <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+          <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M21 12C21 16.4 16.97 20 12 20C10.8 20 9.65 19.8 8.6 19.4L4 21L5.3 17.3C3.86 15.9 3 14.05 3 12C3 7.6 7.03 4 12 4C16.97 4 21 7.6 21 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></div>
+          <div class="title">بيانات الدعم الفني</div>
+          <div class="sub">جوال وواتساب وبريد وأوقات الدوام اللي تظهر للطلاب</div>
+        </a>
+        <a href="{{ url_for('it_archive') }}" class="card">
           <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
           <div class="icon-badge"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M3 7H21V19C21 19.5523 20.5523 20 20 20H4C3.44772 20 3 19.5523 3 19V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M3 7L5 4H19L21 7" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M10 11H14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>
           <div class="title">سجل البلاغات المؤرشفة</div>

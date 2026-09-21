@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College Student Portal | الدعم الفني</title>
+<script>
+  (function(){
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#0F1A18; --gold:#C8A24A; --sand:#F4EEE1; --line:#E1D9C4; --muted:#7A7263; --purple:#8B5FBF; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:var(--sand);
+    color:var(--ink);
+    min-height:100vh;
+  }
+  .topbar{ display:flex; align-items:center; padding:20px 32px; }
+  .back-link{
+    color:var(--ink); text-decoration:none; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:8px;
+    background:#fff; border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; transition:border-color .15s ease, background .15s ease;
+  }
+  .back-link svg{ width:16px; height:16px; flex-shrink:0; }
+  .back-link:hover{ border-color:var(--purple); background:#FBF8F0; }
+
+  .content{ max-width:960px; margin:0 auto; padding:20px 24px 60px; }
+  .content h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:26px; margin-bottom:6px; }
+  .content .sub{ color:var(--muted); font-size:14px; margin-bottom:32px; }
+
+  /* بطاقة رفع بلاغ */
+  .ticket-card{
+    position:relative; overflow:hidden;
+    background:var(--ink); color:var(--sand); border-radius:18px;
+    padding:30px 32px; margin-bottom:36px;
+    display:flex; align-items:center; justify-content:space-between; gap:24px;
+    flex-wrap:wrap; text-decoration:none;
+    transition:transform .18s ease, box-shadow .18s ease;
+    box-shadow:0 10px 30px rgba(15,26,24,.12);
+  }
+  .ticket-card:hover{ transform:translateY(-2px); box-shadow:0 14px 36px rgba(15,26,24,.18); }
+  .ticket-card::before{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(circle at 85% 20%, rgba(139,95,191,.28), transparent 55%);
+    pointer-events:none;
+  }
+  .ticket-card .text{ display:flex; align-items:center; gap:18px; flex:1; min-width:220px; position:relative; z-index:1; }
+  .ticket-card .icon-badge{
+    width:60px; height:60px; border-radius:50%; flex-shrink:0;
+    background:rgba(139,95,191,.2); border:1px solid rgba(139,95,191,.5);
+    display:flex; align-items:center; justify-content:center; font-size:26px;
+  }
+  .ticket-card .title{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:19px; margin-bottom:6px; color:#fff; }
+  .ticket-card .desc{ font-size:13.5px; color:rgba(244,238,225,.7); line-height:1.7; }
+  .ticket-card .go-btn{
+    flex-shrink:0; background:var(--gold); color:var(--ink); font-weight:600; font-size:13px;
+    padding:11px 20px; border-radius:20px; position:relative; z-index:1; transition:opacity .15s ease;
+  }
+  .ticket-card:hover .go-btn{ opacity:.9; }
+
+  .section-label{
+    display:flex; align-items:center; gap:10px;
+    font-size:13px; color:var(--muted); font-weight:600; margin-bottom:16px;
+  }
+  .section-label::after{ content:""; flex:1; height:1px; background:var(--line); }
+
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    grid-auto-flow:dense;
+    gap:16px;
+  }
+  .contact-card{
+    position:relative;
+    background:#fff; border:1.5px solid var(--line); border-radius:14px;
+    padding:22px 20px; display:flex; align-items:center; gap:16px;
+    color:inherit; text-decoration:none;
+    transition:border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+  }
+  a.contact-card:hover{
+    border-color:var(--purple); transform:translateY(-2px);
+    box-shadow:0 8px 20px rgba(139,95,191,.14);
+  }
+  .contact-card .icon-badge{
+    width:48px; height:48px; border-radius:12px; flex-shrink:0;
+    background:#F4EEFA; border:1px solid #E3D6F1;
+    display:flex; align-items:center; justify-content:center; font-size:22px;
+  }
+  .contact-card .body{ min-width:0; flex:1; }
+  .contact-card .label{ font-size:12.5px; color:var(--muted); margin-bottom:3px; }
+  .contact-card .value{ font-weight:600; font-size:15px; line-height:1.6; word-break:break-word; }
+  .contact-card .value.ltr{ direction:ltr; text-align:right; word-break:normal; overflow-wrap:anywhere; }
+  @media (max-width:480px){
+    .topbar{ padding:16px 14px; }
+    .content{ padding:16px 12px 48px; }
+    .ticket-card{ padding:24px 18px; }
+    .contact-card{ padding:16px 14px; gap:12px; }
+    .contact-card .icon-badge{ width:40px; height:40px; font-size:18px; }
+    .contact-card .value{ font-size:14px; }
+    .contact-card .value.ltr{ font-size:13.5px; }
+  }
+  .contact-card .act{ font-size:12px; color:var(--purple); font-weight:600; margin-top:2px; }
+  .contact-card.wide{ grid-column:1 / -1; }
+
+  .note{
+    margin-top:22px; padding:14px 18px; border-radius:12px; font-size:13.5px; line-height:1.8;
+    background:#F4EEFA; border:1px solid #E3D6F1; color:#4A3468;
+  }
+
+  .empty{
+    background:#fff; border:1.5px dashed var(--line); border-radius:14px;
+    padding:36px 24px; text-align:center; color:var(--muted); line-height:1.9; font-size:14px;
+  }
+  .empty .em-ico{ font-size:34px; margin-bottom:8px; }
+
+  /* ===== Entrance motion ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  .topbar{ animation:fadeUp .5s ease both; }
+  .content h1{ animation:fadeUp .55s ease .08s both; }
+  .content .sub{ animation:fadeIn .5s ease .16s both; }
+  .ticket-card{ animation:fadeUp .55s ease .2s both; }
+  .section-label{ animation:fadeIn .5s ease .3s both; }
+  .contact-card, .empty, .note{ animation:fadeUp .5s ease both; }
+  .grid > :nth-child(1){ animation-delay:.36s; }
+  .grid > :nth-child(2){ animation-delay:.41s; }
+  .grid > :nth-child(3){ animation-delay:.46s; }
+  .grid > :nth-child(4){ animation-delay:.51s; }
+  .grid > :nth-child(5){ animation-delay:.56s; }
+  .note{ animation-delay:.62s; }
+  @media (prefers-reduced-motion: reduce){
+    .topbar, .content h1, .content .sub, .ticket-card, .section-label, .contact-card, .empty, .note{ animation:none !important; }
+  }
+
+  /* ===== Dark mode ===== */
+  html[data-theme="dark"] body{ background:#0B1412; color:#EDE7D8; }
+  html[data-theme="dark"] .back-link{ background:#16221D; border-color:#2A3A32; color:#EDE7D8; }
+  html[data-theme="dark"] .back-link:hover{ background:#1B2A24; border-color:var(--purple); }
+  html[data-theme="dark"] .content .sub{ color:#9CA79E; }
+  html[data-theme="dark"] .section-label{ color:#9CA79E; }
+  html[data-theme="dark"] .section-label::after{ background:#26362E; }
+  html[data-theme="dark"] .ticket-card{ background:#16221D; border:1.5px solid #2A3A32; }
+  html[data-theme="dark"] .contact-card{ background:#16221D; border-color:#2A3A32; }
+  html[data-theme="dark"] .contact-card .icon-badge{ background:#1E1A2B; border-color:#3A2F55; }
+  html[data-theme="dark"] .contact-card .label{ color:#9CA79E; }
+  html[data-theme="dark"] .contact-card .act{ color:#B899E0; }
+  html[data-theme="dark"] .note{ background:#1E1A2B; border-color:#3A2F55; color:#D9C8F0; }
+  html[data-theme="dark"] .empty{ background:#16221D; border-color:#2A3A32; color:#9CA79E; }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a class="back-link" href="{{ url_for('dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
+  </div>
+
+  <main class="content">
+    <h1>الدعم الفني</h1>
+    <p class="sub">تواصل مباشر مع الفريق</p>
+
+    <a href="{{ url_for('new_ticket') }}" class="ticket-card">
+      <div class="text">
+        <div class="icon-badge">🛠️</div>
+        <div>
+          <div class="title">عندك مشكلة تقنية؟</div>
+          <div class="desc">ارفع بلاغًا ويوصل لفريق الدعم مباشرة، وتقدر تتابع حالته من صفحة «بلاغاتي».</div>
+        </div>
+      </div>
+      <span class="go-btn">بلاغ جديد ←</span>
+    </a>
+
+    <div class="section-label">طرق التواصل</div>
+
+    {% if has_contact %}
+    <div class="grid">
+      {% if contact.phone %}
+      <a class="contact-card" href="{{ phone_href }}">
+        <div class="icon-badge">📞</div>
+        <div class="body">
+          <div class="label">اتصال هاتفي</div>
+          <div class="value ltr">{{ contact.phone }}</div>
+          <div class="act">اضغط للاتصال</div>
+        </div>
+      </a>
+      {% endif %}
+      {% if contact.whatsapp %}
+      <a class="contact-card" href="{{ wa_link }}" target="_blank" rel="noopener">
+        <div class="icon-badge">💬</div>
+        <div class="body">
+          <div class="label">واتساب</div>
+          <div class="value ltr">{{ contact.whatsapp }}</div>
+          <div class="act">افتح المحادثة</div>
+        </div>
+      </a>
+      {% endif %}
+      {% if contact.email %}
+      <a class="contact-card wide" href="mailto:{{ contact.email }}">
+        <div class="icon-badge">✉️</div>
+        <div class="body">
+          <div class="label">البريد الإلكتروني</div>
+          <div class="value ltr fit">{{ contact.email }}</div>
+          <div class="act">أرسل رسالة</div>
+        </div>
+      </a>
+      {% endif %}
+      {% if contact.location %}
+      <div class="contact-card">
+        <div class="icon-badge">📍</div>
+        <div class="body">
+          <div class="label">موقع مكتب الدعم الفني</div>
+          <div class="value">{{ contact.location }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if contact.hours %}
+      <div class="contact-card">
+        <div class="icon-badge">🕗</div>
+        <div class="body">
+          <div class="label">أوقات الدوام</div>
+          <div class="value">{{ contact.hours }}</div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+    {% if contact.note %}<div class="note">{{ contact.note }}</div>{% endif %}
+    {% else %}
+    <div class="empty">
+      <div class="em-ico">💬</div>
+      لم تُضف بيانات التواصل بعد.<br>
+      في الوقت الحالي تقدر ترفع بلاغًا من الزر أعلاه وسيتابعه فريق الدعم.
+    </div>
+    {% endif %}
+  </main>
+
+<script>
+  // يصغّر خط الإيميل تلقائيًا لين يظهر كامل بسطر واحد
+  function fitEmail(){
+    document.querySelectorAll('.value.fit').forEach(function(el){
+      el.style.fontSize = ''; el.style.whiteSpace = 'nowrap';
+      var size = parseFloat(getComputedStyle(el).fontSize);
+      while (el.scrollWidth > el.clientWidth && size > 10){ size -= 0.5; el.style.fontSize = size + 'px'; }
+      if (el.scrollWidth > el.clientWidth){ el.style.whiteSpace = 'normal'; }
+    });
+  }
+  window.addEventListener('load', fitEmail);
+  window.addEventListener('resize', fitEmail);
+  if (document.fonts && document.fonts.ready){ document.fonts.ready.then(fitEmail); }
+</script>
+</body>
+</html>

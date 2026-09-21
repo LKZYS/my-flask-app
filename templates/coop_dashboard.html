@@ -35,6 +35,29 @@
   }
   .back-link svg{ width:16px; height:16px; flex-shrink:0; }
   .back-link:hover{ border-color:var(--teal); background:rgba(230,241,245,.1); }
+
+  /* ===== زر بيانات المنسّق: أنميشن (الترس يدور + لمعة + ارتفاع بظل) ===== */
+  .settings-link{
+    position:relative; overflow:hidden; isolation:isolate;
+    transition:border-color .15s ease, background .15s ease, transform .2s ease, box-shadow .25s ease;
+  }
+  .settings-link .gear-ico{ display:inline-block; transition:transform .7s cubic-bezier(.34,1.56,.64,1); }
+  .settings-link:hover{ transform:translateY(-2px); box-shadow:0 6px 18px rgba(47,182,168,.28); }
+  .settings-link:hover .gear-ico{ transform:rotate(180deg); }
+  .settings-link:active{ transform:translateY(0) scale(.96); box-shadow:0 2px 6px rgba(47,182,168,.25); }
+  .settings-link:active .gear-ico{ transform:rotate(360deg); transition-duration:.3s; }
+  .settings-link::before{
+    content:""; position:absolute; top:0; bottom:0; width:40%; left:-60%; z-index:-1;
+    background:linear-gradient(105deg, transparent, rgba(255,255,255,.16), transparent);
+    transform:skewX(-20deg); pointer-events:none;
+  }
+  .settings-link:hover::before{ animation:settingsShine .75s ease; }
+  @keyframes settingsShine{ from{ left:-60%; } to{ left:130%; } }
+  @media (prefers-reduced-motion: reduce){
+    .settings-link, .settings-link .gear-ico{ transition:none !important; }
+    .settings-link:hover, .settings-link:active, .settings-link:hover .gear-ico, .settings-link:active .gear-ico{ transform:none !important; }
+    .settings-link::before{ animation:none !important; }
+  }
   .topbar .logo{ font-family:'Tajawal', sans-serif; font-weight:700; font-size:14px; color:var(--muted); }
 
   .content{ max-width:1180px; margin:0 auto; padding:8px 24px 70px; }
@@ -168,6 +191,8 @@
   }
   .act-btn:hover{ opacity:.88; }
   .act-btn.danger{ background:rgba(196,98,63,.18); color:#F0A98E; border:1px solid rgba(196,98,63,.45); }
+  .act-btn.edit{ background:rgba(230,241,245,.07); color:var(--sand); border:1px solid var(--line); }
+  .act-btn.edit:hover{ border-color:var(--teal); opacity:1; }
   .reject-box summary{
     list-style:none; cursor:pointer; font-size:12.5px; font-weight:600; color:#E08A68;
     border:1px solid rgba(196,98,63,.4); border-radius:8px; padding:9px 16px; display:inline-block;
@@ -181,6 +206,67 @@
     border:1px solid var(--line); border-radius:8px; padding:9px 12px; min-width:260px; outline:none;
   }
   .reject-box input:focus{ border-color:#E08A68; }
+
+  /* ===== مراجعة شهادة الإتمام: زر اعتماد بلون إيجابي (مو أحمر) + لوحة من قسمين ===== */
+  .review-box[open]{ width:100%; }
+  .review-box summary{
+    list-style:none; cursor:pointer; display:inline-flex; align-items:center; gap:7px;
+    font-size:12.5px; font-weight:700; color:#fff; background:#2E7D5B;
+    border-radius:8px; padding:9px 16px; transition:opacity .15s ease, transform .15s ease, box-shadow .25s ease;
+    position:relative; overflow:hidden; isolation:isolate;
+    animation:reviewPulse 2.6s ease-in-out infinite;  /* نبضة هادية تلفت الانتباه إن فيه شهادة تنتظر المراجعة */
+  }
+  .review-box summary::-webkit-details-marker{ display:none; }
+  .review-box summary:hover{ opacity:.95; transform:translateY(-2px); box-shadow:0 6px 18px rgba(46,125,91,.45); animation:none; }
+  .review-box summary:active{ transform:translateY(0) scale(.97); box-shadow:0 2px 6px rgba(46,125,91,.4); }
+  .review-box summary::after{ content:"▾"; font-size:11px; transition:transform .3s cubic-bezier(.34,1.56,.64,1); }
+  .review-box[open] summary::after{ transform:rotate(180deg); }
+  .review-box[open] summary{ margin-bottom:12px; animation:none; }
+  /* لمعة تمر على الزر عند تمرير الماوس */
+  .review-box summary::before{
+    content:""; position:absolute; top:0; bottom:0; width:40%; left:-60%; z-index:-1;
+    background:linear-gradient(105deg, transparent, rgba(255,255,255,.28), transparent);
+    transform:skewX(-20deg); pointer-events:none;
+  }
+  .review-box summary:hover::before{ animation:reviewShine .75s ease; }
+  /* علامة ✓ تقفز خفيف عند التمرير */
+  .review-box .chk{ display:inline-block; }
+  .review-box summary:hover .chk{ animation:chkPop .5s ease; }
+  /* فتح اللوحة بحركة انزلاق ناعمة */
+  .review-box[open] .review-panel{ animation:reviewOpen .35s ease both; }
+  @keyframes reviewPulse{
+    0%,100%{ box-shadow:0 0 0 0 rgba(46,125,91,.55); }
+    50%{ box-shadow:0 0 0 8px rgba(46,125,91,0); }
+  }
+  @keyframes reviewShine{ from{ left:-60%; } to{ left:130%; } }
+  @keyframes chkPop{
+    0%{ transform:scale(1); } 40%{ transform:scale(1.4) rotate(-8deg); } 100%{ transform:scale(1) rotate(0); }
+  }
+  @keyframes reviewOpen{ from{ opacity:0; transform:translateY(-8px); } to{ opacity:1; transform:translateY(0); } }
+  @media (prefers-reduced-motion: reduce){
+    .review-box summary, .review-box summary::before, .review-box .chk, .review-box[open] .review-panel{ animation:none !important; }
+  }
+  .review-panel{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (max-width:720px){ .review-panel{ grid-template-columns:1fr; } }
+  .review-col{ border:1px solid var(--line); border-radius:12px; padding:14px 16px; }
+  .review-col form{ display:flex; flex-direction:column; gap:9px; }
+  .review-col h4{ font-size:13px; font-weight:700; }
+  .review-col label{ font-size:12px; color:var(--muted); }
+  .review-col.approve{ border-color:rgba(46,125,91,.5); background:rgba(46,125,91,.08); }
+  .review-col.approve h4{ color:#8FE3B8; }
+  .review-col.reject{ border-color:rgba(196,98,63,.4); background:rgba(196,98,63,.06); }
+  .review-col.reject h4{ color:#F0A98E; }
+  .review-col input[type="text"]{
+    font-family:inherit; font-size:12.5px; color:var(--sand); background:rgba(0,0,0,.2);
+    border:1px solid var(--line); border-radius:8px; padding:9px 12px; width:100%; outline:none;
+  }
+  .review-col input[type="text"]:focus{ border-color:#E08A68; }
+  .review-col input[type="file"]{ font-family:inherit; font-size:12px; color:var(--muted); width:100%; }
+  .review-col input[type="file"]::file-selector-button{
+    font-family:inherit; font-size:12px; font-weight:600; color:var(--sand); background:rgba(230,241,245,.1);
+    border:1px solid var(--line); border-radius:6px; padding:6px 12px; margin-left:10px; cursor:pointer;
+  }
+  .act-btn.approve{ background:#2E7D5B; color:#fff; }
 </style>
 </head>
 <body>
@@ -196,7 +282,10 @@
 
   <div class="topbar">
     <a class="back-link" href="{{ url_for('it_dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
-    <span class="logo">College Student Portal</span>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <a class="back-link settings-link" href="{{ url_for('coop_settings') }}"><span class="gear-ico">⚙️</span> بيانات المنسّق</a>
+      <span class="logo">College Student Portal</span>
+    </div>
   </div>
 
   <main class="content">
@@ -282,7 +371,7 @@
                 <div class="req-student">{{ r[2] }} <span style="color:var(--muted); font-weight:400; font-size:12px;">#{{ r[0] }}</span></div>
                 <div class="req-meta">{{ r[3] }} — {{ r[4] }}{% if r[6] %} · {{ r[6] }}{% endif %}</div>
               </div>
-              {% if st == 'awaiting' %}<span class="badge awaiting">طلب جديد</span>
+              {% if st == 'awaiting' %}<span class="badge awaiting">طلب جديد</span>{% if r[26] %}<span class="badge pending">✏️ عدّله الطالب</span>{% endif %}
               {% elif st == 'pending' %}<span class="badge pending">قيد المراجعة</span>
               {% elif st == 'accepted' %}<span class="badge accepted">✓ تم القبول</span>
               {% elif r[7] == 'مرفوض من الكلية' %}<span class="badge rejected">مرفوض من الكلية</span>
@@ -294,6 +383,7 @@
                 <div class="req-field"><b>إيميل المنشأة</b>{{ r[5] or 'لم يحدده الطالب' }}</div>
                 <div class="req-field"><b>تاريخ الطلب</b>{{ r[10] }}</div>
                 {% if r[16] %}<div class="req-field"><b>ملاحظات الطالب</b>{{ r[16] }}</div>{% endif %}
+                {% if r[26] %}<div class="req-field"><b>آخر تعديل من الطالب</b>{{ r[26] }}</div>{% endif %}
               {% elif r[7] == 'مرفوض من الكلية' %}
                 <div class="req-field"><b>تاريخ الطلب</b>{{ r[10] }}</div>
                 <div class="req-field"><b>تاريخ الرفض</b>{{ r[13] }}</div>
@@ -331,20 +421,35 @@
             {% elif st == 'accepted' and r[20] == 'قيد المراجعة' %}
               <div class="act-row">
                 <a class="act-btn" href="{{ url_for('static', filename='coop_docs/' ~ r[19]) }}" target="_blank" rel="noopener">عرض شهادة الإتمام</a>
-                <details class="reject-box">
-                  <summary>اعتماد / رفض الشهادة</summary>
-                  <form method="POST" action="{{ url_for('coop_review_completion', req_id=r[0]) }}" enctype="multipart/form-data" style="flex-direction:column; align-items:stretch; margin-bottom:8px;">
-                    <input type="hidden" name="decision" value="approve">
-                    <label style="font-size:12px; color:var(--muted);">إرفاق شهادة الطالب</label>
-                    <input type="file" name="final_certificate" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
-                    <button type="submit" class="act-btn">اعتماد الشهادة</button>
-                  </form>
-                  <form method="POST" action="{{ url_for('coop_review_completion', req_id=r[0]) }}">
-                    <input type="hidden" name="decision" value="reject">
-                    <input type="text" name="reason" maxlength="300" placeholder="سبب رفض الشهادة (يظهر للطالب)" required>
-                    <button type="submit" class="act-btn danger">رفض الشهادة</button>
-                  </form>
+                <details class="review-box">
+                  <summary><span class="chk">✓</span> اعتماد / رفض الشهادة</summary>
+                  <div class="review-panel">
+                    <div class="review-col approve">
+                      <h4>اعتماد الشهادة</h4>
+                      <form method="POST" action="{{ url_for('coop_review_completion', req_id=r[0]) }}" enctype="multipart/form-data">
+                        <input type="hidden" name="decision" value="approve">
+                        <label>إرفاق شهادة الطالب</label>
+                        <input type="file" name="final_certificate" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" required>
+                        <button type="submit" class="act-btn approve">✓ اعتماد الشهادة</button>
+                      </form>
+                    </div>
+                    <div class="review-col reject">
+                      <h4>رفض الشهادة</h4>
+                      <form method="POST" action="{{ url_for('coop_review_completion', req_id=r[0]) }}">
+                        <input type="hidden" name="decision" value="reject">
+                        <label>السبب (يظهر للطالب)</label>
+                        <input type="text" name="reason" maxlength="300" placeholder="مثال: الشهادة غير واضحة أو ناقصة" required>
+                        <button type="submit" class="act-btn danger">رفض الشهادة</button>
+                      </form>
+                    </div>
+                  </div>
                 </details>
+              </div>
+            {% endif %}
+            {% if r[7] in ('قيد المراجعة عند المنشأة', 'تم القبول', 'مرفوض') %}
+              <div class="act-row" style="margin-top:12px;">
+                <a class="act-btn edit" href="{{ url_for('coop_edit_request', req_id=r[0]) }}">✏️ تعديل الطلب</a>
+                {% if r[25] %}<span style="font-size:11.5px; color:var(--muted); align-self:center;">آخر تعديل: {{ r[25] }} · {{ r[26] }}</span>{% endif %}
               </div>
             {% endif %}
             {% if r[15] %}

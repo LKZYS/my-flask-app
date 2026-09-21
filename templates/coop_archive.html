@@ -75,6 +75,8 @@
   .list{ display:flex; flex-direction:column; gap:12px; }
   .req-card{ background:var(--panel); border:1.5px solid var(--line); border-radius:14px; padding:18px 20px; transition:border-color .15s ease; }
   .req-card.hide{ display:none; }
+  .edit-link{ font-size:12.5px; font-weight:700; color:var(--sand); text-decoration:none; border:1px solid var(--line); border-radius:8px; padding:8px 14px; background:rgba(230,241,245,.07); transition:border-color .15s ease; }
+  .edit-link:hover{ border-color:var(--teal); }
   .req-card:hover{ border-color:rgba(47,182,168,.35); }
   .req-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; flex-wrap:wrap; }
   .req-student{ font-weight:600; font-size:14.5px; }
@@ -176,6 +178,12 @@
                 <div class="req-field"><b>تاريخ القرار</b>{{ r[13] }}</div>
               {% endif %}
             </div>
+            {% if st != 'college_rejected' %}
+              <div style="margin-top:12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <a class="edit-link" href="{{ url_for('coop_edit_request', req_id=r[0]) }}">✏️ تعديل الطلب</a>
+                {% if r[25] %}<span style="font-size:11.5px; color:var(--muted);">آخر تعديل: {{ r[25] }} · {{ r[26] }}</span>{% endif %}
+              </div>
+            {% endif %}
             {% if r[15] %}
               <div class="docs-row">
                 {% for doc in r[15].split(',') %}

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>College IT Support | طلب تدريب تعاوني</title>
+<title>College Student Portal | طلب تدريب تعاوني</title>
 <script>
   (function(){
     if (localStorage.getItem('theme') === 'dark') {
@@ -191,12 +191,12 @@
   <div class="side-fill right" aria-hidden="true"></div>
 
   <div class="topbar">
-    <a class="back-link" href="{{ url_for('dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
+    <a class="back-link" href="{{ url_for('my_coop') if editing else url_for('dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>{% if editing %}رجوع لطلباتي{% else %}رجوع للوحة التحكم{% endif %}</a>
   </div>
 
   <main class="content">
-    <h1>طلب تدريب تعاوني جديد</h1>
-    <p class="sub">حدد الجهة اللي تبي تتدرب فيها، والكلية تصدر لك الخطاب الموجّه لها</p>
+    <h1>{% if editing %}تعديل طلب التدريب{% else %}طلب تدريب تعاوني جديد{% endif %}</h1>
+    <p class="sub">{% if editing %}تقدر تعدّل بيانات طلبك طالما الكلية ما أصدرت الخطاب بعد{% else %}حدد الجهة اللي تبي تتدرب فيها، والكلية تصدر لك الخطاب الموجّه لها{% endif %}</p>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -234,7 +234,7 @@
           </div>
 
           <button type="submit" class="submit">
-            إرسال الطلب للكلية
+            {% if editing %}حفظ التعديلات{% else %}إرسال الطلب للكلية{% endif %}
             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </form>

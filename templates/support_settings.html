@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>بيانات الدعم الفني | College Student Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B1A22; --panel:#0F232C; --line:rgba(230,241,245,.14);
+    --sand:#EAF3F6; --muted:rgba(234,243,246,.6); --teal:#A98BDB; --err:#C4623F;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:'IBM Plex Sans Arabic', sans-serif;
+    background:radial-gradient(circle at 85% -10%, rgba(139,95,191,.14), transparent 40%), var(--ink);
+    color:var(--sand); min-height:100vh; padding:24px;
+  }
+  .page{ width:100%; max-width:580px; margin:0 auto; }
+  .back-link{
+    display:inline-flex; align-items:center; gap:8px; margin-bottom:20px;
+    color:var(--sand); text-decoration:none; font-size:14px; font-weight:500;
+    background:rgba(230,241,245,.06); border:1.5px solid var(--line); border-radius:20px; padding:8px 16px;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .back-link:hover{ border-color:var(--teal); background:rgba(230,241,245,.1); }
+  .card{ background:var(--panel); border:1.5px solid var(--line); border-radius:20px; padding:34px; box-shadow:0 24px 55px rgba(0,0,0,.35); }
+  .eyebrow{ font-size:12.5px; color:var(--teal); font-weight:600; }
+  h1{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:21px; margin:8px 0 10px; }
+  .desc{ font-size:13.5px; color:var(--muted); line-height:1.9; margin-bottom:22px; }
+  .field{ margin-bottom:16px; }
+  .field label{ display:block; font-size:13px; font-weight:600; margin-bottom:7px; }
+  .field .hint{ font-size:12px; color:var(--muted); margin-top:6px; }
+  .field input{
+    width:100%; height:46px; padding:0 16px; font-family:inherit; font-size:14px; color:var(--sand);
+    background:rgba(230,241,245,.06); border:1.5px solid var(--line); border-radius:12px; outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input.ltr{ direction:ltr; text-align:right; }
+  .field input:focus{ border-color:var(--teal); box-shadow:0 0 0 3px rgba(139,95,191,.18); }
+  .submit-btn{ width:100%; height:48px; border:none; border-radius:12px; cursor:pointer; margin-top:8px; background:#8B5FBF; color:#fff; font-family:inherit; font-weight:700; font-size:14.5px; }
+  .submit-btn:hover{ opacity:.92; }
+  .msg{ margin-bottom:18px; padding:12px 16px; border-radius:12px; font-size:13px; line-height:1.7; }
+  .msg.success{ background:rgba(46,125,91,.14); border:1px solid rgba(46,125,91,.4); color:#8FE3B8; }
+  .msg.error{ background:rgba(196,98,63,.14); border:1px solid rgba(196,98,63,.4); color:#E08A68; }
+  .preview-title{ font-size:12.5px; font-weight:600; color:var(--muted); margin:26px 0 10px; }
+  .contact-box{ padding:16px 18px; border-radius:14px; text-align:center; background:rgba(139,95,191,.07); border:1px solid rgba(139,95,191,.28); }
+  .contact-title{ font-size:12.5px; color:var(--teal); font-weight:600; margin-bottom:6px; }
+  .contact-name{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:16px; margin-bottom:10px; }
+  .contact-links{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+  .contact-line{ font-size:13px; color:var(--muted); margin-top:10px; line-height:1.8; }
+  .contact-links span{ font-size:13px; direction:ltr; background:rgba(230,241,245,.06); border:1px solid var(--line); border-radius:20px; padding:8px 14px; }
+
+  /* ===== أنميشن الصفحة ===== */
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes popIn{ from{ opacity:0; transform:scale(.94) translateY(10px); } to{ opacity:1; transform:scale(1) translateY(0); } }
+  @keyframes shake{ 0%,100%{ transform:translateX(0); } 20%{ transform:translateX(-7px); } 40%{ transform:translateX(6px); } 60%{ transform:translateX(-4px); } 80%{ transform:translateX(3px); } }
+  @keyframes boxGlow{ 0%,100%{ box-shadow:0 0 0 0 rgba(139,95,191,0); } 40%{ box-shadow:0 0 0 6px rgba(139,95,191,.22); } }
+  @keyframes btnShine{ from{ left:-60%; } to{ left:130%; } }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  /* ملاحظة: نستخدم backwards مو both عشان حركة الدخول ما تلغي تأثير الـ hover بعد ما تنتهي */
+
+  .back-link{ animation:fadeIn .45s ease backwards; }
+  .back-link .arrow{ display:inline-block; transition:transform .25s ease; }
+  .back-link:hover{ transform:translateY(-2px); box-shadow:0 6px 16px rgba(139,95,191,.2); }
+  .back-link:hover .arrow{ transform:translateX(5px); }
+  .back-link:active{ transform:translateY(0) scale(.96); }
+  .back-link{ transition:border-color .15s ease, background .15s ease, transform .2s ease, box-shadow .25s ease; }
+
+  .card{ animation:fadeUp .55s ease .05s backwards; }
+  .eyebrow{ display:inline-block; animation:fadeUp .5s ease .18s backwards; }
+  h1{ animation:fadeUp .5s ease .24s backwards; }
+  .desc{ animation:fadeUp .5s ease .3s backwards; }
+  .msg{ animation:fadeUp .45s ease .34s backwards; }
+  .msg.error{ animation:fadeUp .45s ease .34s backwards, shake .5s ease .8s; }
+  .field{ animation:fadeUp .5s ease backwards; }
+  form .field:nth-child(1){ animation-delay:.36s; }
+  form .field:nth-child(2){ animation-delay:.42s; }
+  form .field:nth-child(3){ animation-delay:.48s; }
+  form .field:nth-child(4){ animation-delay:.54s; }
+  form .field:nth-child(5){ animation-delay:.60s; }
+  form .field:nth-child(6){ animation-delay:.66s; }
+  .submit-btn{ animation:fadeUp .5s ease .74s backwards; }
+  .preview-title{ animation:fadeIn .5s ease .84s backwards; }
+  .contact-box{ animation:popIn .55s cubic-bezier(.34,1.56,.64,1) .89s backwards, boxGlow 1.6s ease 1.45s 1; }
+
+  .field label{ transition:color .2s ease; }
+  .field:focus-within label{ color:var(--teal); }
+  .field input:hover{ border-color:rgba(139,95,191,.5); }
+  .field input:focus{ transform:translateY(-1px); }
+  .field input{ transition:border-color .15s ease, box-shadow .2s ease, transform .2s ease; }
+
+  .submit-btn{
+    position:relative; overflow:hidden; isolation:isolate;
+    display:inline-flex; align-items:center; justify-content:center;
+    transition:transform .2s ease, box-shadow .25s ease, opacity .15s ease;
+  }
+  .submit-btn:hover{ opacity:1; transform:translateY(-2px); box-shadow:0 8px 22px rgba(139,95,191,.4); }
+  .submit-btn:active{ transform:translateY(0) scale(.98); box-shadow:0 3px 8px rgba(139,95,191,.35); }
+  .submit-btn::before{
+    content:""; position:absolute; top:0; bottom:0; width:40%; left:-60%; z-index:-1;
+    background:linear-gradient(105deg, transparent, rgba(255,255,255,.35), transparent);
+    transform:skewX(-20deg); pointer-events:none;
+  }
+  .submit-btn:hover::before{ animation:btnShine .75s ease; }
+  .submit-btn.loading{ pointer-events:none; opacity:.85; }
+  .submit-btn.loading::after{
+    content:""; width:14px; height:14px; margin-right:10px; border-radius:50%;
+    border:2px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin .7s linear infinite;
+  }
+
+  .contact-links span{ transition:transform .2s ease, border-color .2s ease, background .2s ease; }
+  .contact-links span:hover{ transform:translateY(-2px); border-color:var(--teal); background:rgba(139,95,191,.12); }
+
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{ animation:none !important; transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <a class="back-link" href="{{ url_for('it_dashboard') }}"><span class="arrow">→</span> رجوع للوحة التحكم</a>
+
+  <div class="card">
+    <span class="eyebrow">الدعم الفني</span>
+    <h1>بيانات التواصل مع الدعم الفني</h1>
+    <p class="desc">تظهر هذه البيانات للطلاب في صفحة «الدعم الفني» عند الضغط على الزر من لوحتهم، ليتواصلوا مع الفريق مباشرة. عبّي فقط الحقول اللي تحب تظهر، والحقول الفاضية تختفي تلقائيًا.</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <div class="msg {{ 'success' if category == 'success' else 'error' }}">{{ message }}</div>
+      {% endfor %}
+    {% endwith %}
+    {% if error %}<div class="msg error">{{ error }}</div>{% endif %}
+
+    <form method="POST">
+      <div class="field">
+        <label for="phone">رقم الجوال</label>
+        <input type="tel" id="phone" name="phone" maxlength="20" class="ltr" value="{{ contact.phone }}" placeholder="05X XXX XXXX">
+        <div class="hint">لازم تكتب جوال أو واتساب أو بريد على الأقل.</div>
+      </div>
+      <div class="field">
+        <label for="whatsapp">رقم الواتساب</label>
+        <input type="tel" id="whatsapp" name="whatsapp" maxlength="20" class="ltr" value="{{ contact.whatsapp }}" placeholder="05X XXX XXXX">
+        <div class="hint">يتحول تلقائيًا لرابط يفتح محادثة واتساب (الأرقام اللي تبدأ بـ 05 تُعامل كأرقام سعودية).</div>
+      </div>
+      <div class="field">
+        <label for="email">البريد الإلكتروني</label>
+        <input type="email" id="email" name="email" maxlength="120" class="ltr" value="{{ contact.email }}" placeholder="support@example.edu.sa">
+      </div>
+      <div class="field">
+        <label for="location">موقع مكتب الدعم الفني</label>
+        <input type="text" id="location" name="location" maxlength="120" value="{{ contact.location }}" placeholder="مثال: المبنى الإداري، الدور الأول، غرفة 105">
+      </div>
+      <div class="field">
+        <label for="hours">أوقات الدوام</label>
+        <input type="text" id="hours" name="hours" maxlength="100" value="{{ contact.hours }}" placeholder="الأحد – الخميس، من 8 صباحًا إلى 4 مساءً">
+        <div class="hint">يظهر أيضًا في سؤال «دوام الدعم الفني؟» في لوحة الطالب.</div>
+      </div>
+      <div class="field">
+        <label for="note">ملاحظة للطلاب (اختياري)</label>
+        <input type="text" id="note" name="note" maxlength="200" value="{{ contact.note }}" placeholder="مثال: للأمور العاجلة تواصل معنا واتساب، وللبقية ارفع بلاغًا">
+      </div>
+      <button type="submit" class="submit-btn">حفظ البيانات</button>
+    </form>
+
+    {% if (contact.phone or contact.whatsapp or contact.email) and not error %}
+      <div class="preview-title">هكذا تظهر للطالب:</div>
+      <div class="contact-box">
+        <div class="contact-title">للتواصل مع فريق الدعم الفني</div>
+        <div class="contact-links">
+          {% if contact.phone %}<span>📞 {{ contact.phone }}</span>{% endif %}
+          {% if contact.whatsapp %}<span>💬 {{ contact.whatsapp }}</span>{% endif %}
+          {% if contact.email %}<span>✉️ {{ contact.email }}</span>{% endif %}
+        </div>
+        {% if contact.location %}<div class="contact-line">📍 {{ contact.location }}</div>{% endif %}
+        {% if contact.hours %}<div class="contact-line">🕗 {{ contact.hours }}</div>{% endif %}
+        {% if contact.note %}<div class="contact-line">{{ contact.note }}</div>{% endif %}
+      </div>
+    {% endif %}
+  </div>
+</div>
+<script>
+  // حالة "جارٍ الحفظ" على الزر بعد ما يعدّي التحقق من الحقول
+  document.querySelector('form').addEventListener('submit', function(){
+    var b = this.querySelector('.submit-btn');
+    b.classList.add('loading');
+    b.textContent = 'جارٍ الحفظ';
+  });
+</script>
+</body>
+</html>

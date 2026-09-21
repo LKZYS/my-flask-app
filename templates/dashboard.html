@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>College IT Support | لوحة التحكم</title>
+<title>College Student Portal | لوحة التحكم</title>
 <script>
   (function(){
     if (localStorage.getItem('theme') === 'dark') {
@@ -526,7 +526,7 @@
         </div>
         <span class="name">{{ user }}</span>
       </a>
-      <span class="logo">College IT Support</span>
+      <span class="logo">College Student Portal</span>
     </div>
     <button class="menu-btn" id="menuBtn" aria-label="القائمة"><span></span></button>
   </div>
@@ -616,7 +616,7 @@
       <div class="hero-blob-gold"></div>
       <div class="hero-blob-teal"></div>
       <div class="hero-text">
-        <span class="eyebrow">College IT Support</span>
+        <span class="eyebrow">College Student Portal</span>
         <h1>مرحبًا، {{ user }}</h1>
         <p>تابع بلاغاتك التقنية وأرسل بلاغ جديد من مكان واحد.</p>
       </div>
@@ -670,7 +670,7 @@
         <div class="title">خدمة التدريب التعاوني</div>
         <div class="sub">تابع حالة طلب تدريبك</div>
       </a>
-      <a href="#" class="card c-purple">
+      <a href="{{ url_for('support') }}" class="card c-purple">
         <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
         <div class="icon-badge">💬</div>
         <div class="title">الدعم الفني</div>
@@ -741,7 +741,7 @@
           </details>
           <details class="faq-item">
             <summary>دوام الدعم الفني؟</summary>
-            <p>الأحد – الخميس، من الساعة 8 صباحًا إلى 4 مساءً.</p>
+            <p>{{ support_hours or 'الأحد – الخميس، من الساعة 8 صباحًا إلى 4 مساءً' }}.</p>
           </details>
         </div>
       </div>
