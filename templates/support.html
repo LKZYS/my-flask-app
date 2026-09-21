@@ -13,14 +13,31 @@
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#0F1A18; --gold:#C8A24A; --sand:#F4EEE1; --line:#E1D9C4; --muted:#7A7263; --purple:#8B5FBF; }
+  :root{
+    --ink:#0F1A18; --gold:#C8A24A; --sand:#F4EEE1; --line:#E1D9C4; --muted:#7A7263; --purple:#8B5FBF;
+    --acc-phone:#8B5FBF; --acc-whats:#3FBF7F; --acc-mail:#C8A24A; --acc-loc:#E0645F; --acc-hours:#5FA8D3;
+  }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{
     font-family:'IBM Plex Sans Arabic', sans-serif;
     background:var(--sand);
     color:var(--ink);
     min-height:100vh;
+    position:relative;
+    overflow-x:hidden;
   }
+  /* ambient floating blobs (depth) */
+  .bg-orb{
+    position:fixed; border-radius:50%; filter:blur(60px); pointer-events:none; z-index:0;
+    opacity:.16; animation:float 14s ease-in-out infinite;
+  }
+  .bg-orb.o1{ width:280px; height:280px; background:var(--purple); top:-60px; inset-inline-end:-60px; animation-delay:0s; }
+  .bg-orb.o2{ width:220px; height:220px; background:var(--gold); bottom:-40px; inset-inline-start:-40px; animation-delay:-6s; }
+  @keyframes float{
+    0%,100%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(-16px,20px) scale(1.08); }
+  }
+  .topbar, .content{ position:relative; z-index:1; }
   .topbar{ display:flex; align-items:center; padding:20px 32px; }
   .back-link{
     color:var(--ink); text-decoration:none; font-size:14px; font-weight:500;
@@ -45,7 +62,11 @@
     transition:transform .18s ease, box-shadow .18s ease;
     box-shadow:0 10px 30px rgba(15,26,24,.12);
   }
-  .ticket-card:hover{ transform:translateY(-2px); box-shadow:0 14px 36px rgba(15,26,24,.18); }
+  .ticket-card:hover{ transform:translateY(-3px); box-shadow:0 14px 36px rgba(15,26,24,.18); }
+  .ticket-card:hover .icon-badge{ transform:scale(1.1) rotate(-8deg); }
+  .ticket-card .icon-badge{ animation:iconBreathe 3.2s ease-in-out infinite; transition:transform .35s cubic-bezier(.2,.8,.3,1.5); }
+  .ticket-card .go-btn{ transition:opacity .15s ease, transform .2s ease; }
+  .ticket-card:hover .go-btn{ transform:translateX(-4px); }
   .ticket-card::before{
     content:""; position:absolute; inset:0;
     background:radial-gradient(circle at 85% 20%, rgba(139,95,191,.28), transparent 55%);
@@ -73,26 +94,27 @@
 
   .grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
-    grid-auto-flow:dense;
+    grid-template-columns:repeat(2, minmax(0, 1fr));
     gap:16px;
   }
   .contact-card{
-    position:relative;
+    position:relative; overflow:hidden;
     background:#fff; border:1.5px solid var(--line); border-radius:14px;
     padding:22px 20px; display:flex; align-items:center; gap:16px;
     color:inherit; text-decoration:none;
-    transition:border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+    transition:border-color .2s ease, transform .25s cubic-bezier(.2,.8,.3,1.3), box-shadow .25s ease;
+    --acc: var(--purple);
   }
-  a.contact-card:hover{
-    border-color:var(--purple); transform:translateY(-2px);
-    box-shadow:0 8px 20px rgba(139,95,191,.14);
+  .contact-card.acc-phone{ --acc: var(--acc-phone); }
+  .contact-card.acc-whats{ --acc: var(--acc-whats); }
+  .contact-card.acc-mail{ --acc: var(--acc-mail); }
+  .contact-card.acc-loc{ --acc: var(--acc-loc); }
+  .contact-card.acc-hours{ --acc: var(--acc-hours); }
+  @keyframes iconBreathe{
+    0%,100%{ transform:scale(1); }
+    50%{ transform:scale(1.05); }
   }
-  .contact-card .icon-badge{
-    width:48px; height:48px; border-radius:12px; flex-shrink:0;
-    background:#F4EEFA; border:1px solid #E3D6F1;
-    display:flex; align-items:center; justify-content:center; font-size:22px;
-  }
+  @media (prefers-reduced-motion: reduce){ .icon-badge{ animation:none !important; } }
   .contact-card .body{ min-width:0; flex:1; }
   .contact-card .label{ font-size:12.5px; color:var(--muted); margin-bottom:3px; }
   .contact-card .value{ font-weight:600; font-size:15px; line-height:1.6; word-break:break-word; }
@@ -106,8 +128,29 @@
     .contact-card .value{ font-size:14px; }
     .contact-card .value.ltr{ font-size:13.5px; }
   }
-  .contact-card .act{ font-size:12px; color:var(--purple); font-weight:600; margin-top:2px; }
   .contact-card.wide{ grid-column:1 / -1; }
+  @media (max-width:560px){ .grid{ grid-template-columns:1fr; } }
+
+  /* بطاقة معلومات مدمجة (الدوام + الموقع) */
+  .info-card{ padding:0; gap:0; }
+  .info-half{ flex:1; min-width:0; display:flex; align-items:center; gap:14px; padding:22px 20px; }
+  .info-divider{ width:1px; align-self:stretch; background:var(--line); }
+  html[data-theme="dark"] .info-divider{ background:#2A3A32; }
+  @media (max-width:480px){
+    .info-card{ flex-direction:column; }
+    .info-divider{ width:auto; height:1px; align-self:stretch; }
+    .info-half{ padding:16px 14px; }
+  }
+
+
+  /* ripple */
+  .ripple{
+    position:absolute; border-radius:50%; background:rgba(255,255,255,.55);
+    transform:scale(0); animation:rippleAnim .55s ease-out forwards; pointer-events:none; z-index:2;
+  }
+  html[data-theme="dark"] .ripple{ background:rgba(255,255,255,.18); }
+  @keyframes rippleAnim{ to{ transform:scale(1); opacity:0; } }
+
 
   .note{
     margin-top:22px; padding:14px 18px; border-radius:12px; font-size:13.5px; line-height:1.8;
@@ -120,23 +163,46 @@
   }
   .empty .em-ico{ font-size:34px; margin-bottom:8px; }
 
+
+  /* ===== تصميم البطاقات (عرض فقط، بدون ضغط) ===== */
+  .contact-card{ cursor:default; }
+  .info-half{ --acc:var(--purple); }
+  .info-half.acc-hours{ --acc:var(--acc-hours); }
+  .info-half.acc-loc{ --acc:var(--acc-loc); }
+  .contact-card .icon-badge, .info-half .icon-badge{
+    width:48px; height:48px; border-radius:12px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    color:var(--acc);
+    background:color-mix(in srgb, var(--acc) 14%, transparent);
+    border:1px solid color-mix(in srgb, var(--acc) 38%, transparent);
+    position:relative; z-index:1;
+  }
+  .contact-card .icon-badge svg, .info-half .icon-badge svg{ width:22px; height:22px; }
+  .contact-card .value{ font-weight:700; }
+  @media (max-width:480px){
+    .contact-card .icon-badge, .info-half .icon-badge{ width:40px; height:40px; }
+    .contact-card .icon-badge svg, .info-half .icon-badge svg{ width:19px; height:19px; }
+  }
+
   /* ===== Entrance motion ===== */
-  @keyframes fadeUp{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:translateY(0); } }
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(18px) scale(.98); } to{ opacity:1; transform:translateY(0) scale(1); } }
   @keyframes fadeIn{ from{ opacity:0; } to{ opacity:1; } }
-  .topbar{ animation:fadeUp .5s ease both; }
-  .content h1{ animation:fadeUp .55s ease .08s both; }
+  @keyframes popIn{ from{ opacity:0; transform:translateY(14px) scale(.9); } to{ opacity:1; transform:translateY(0) scale(1); } }
+  .topbar{ animation:fadeUp .55s cubic-bezier(.2,.8,.2,1) both; }
+  .content h1{ animation:fadeUp .6s cubic-bezier(.2,.8,.2,1) .08s both; }
   .content .sub{ animation:fadeIn .5s ease .16s both; }
-  .ticket-card{ animation:fadeUp .55s ease .2s both; }
+  .ticket-card{ animation:fadeUp .6s cubic-bezier(.2,.8,.2,1) .2s both; }
   .section-label{ animation:fadeIn .5s ease .3s both; }
-  .contact-card, .empty, .note{ animation:fadeUp .5s ease both; }
+  .contact-card, .empty, .note{ animation:popIn .55s cubic-bezier(.2,.8,.2,1.1) both; }
   .grid > :nth-child(1){ animation-delay:.36s; }
-  .grid > :nth-child(2){ animation-delay:.41s; }
-  .grid > :nth-child(3){ animation-delay:.46s; }
-  .grid > :nth-child(4){ animation-delay:.51s; }
-  .grid > :nth-child(5){ animation-delay:.56s; }
-  .note{ animation-delay:.62s; }
+  .grid > :nth-child(2){ animation-delay:.42s; }
+  .grid > :nth-child(3){ animation-delay:.48s; }
+  .grid > :nth-child(4){ animation-delay:.54s; }
+  .grid > :nth-child(5){ animation-delay:.6s; }
+  .note{ animation-delay:.66s; }
+  .bg-orb{ animation:float 14s ease-in-out infinite, fadeIn 1.2s ease both; }
   @media (prefers-reduced-motion: reduce){
-    .topbar, .content h1, .content .sub, .ticket-card, .section-label, .contact-card, .empty, .note{ animation:none !important; }
+    .topbar, .content h1, .content .sub, .ticket-card, .section-label, .contact-card, .empty, .note, .bg-orb, .icon-badge{ animation:none !important; }
   }
 
   /* ===== Dark mode ===== */
@@ -148,14 +214,15 @@
   html[data-theme="dark"] .section-label::after{ background:#26362E; }
   html[data-theme="dark"] .ticket-card{ background:#16221D; border:1.5px solid #2A3A32; }
   html[data-theme="dark"] .contact-card{ background:#16221D; border-color:#2A3A32; }
-  html[data-theme="dark"] .contact-card .icon-badge{ background:#1E1A2B; border-color:#3A2F55; }
   html[data-theme="dark"] .contact-card .label{ color:#9CA79E; }
-  html[data-theme="dark"] .contact-card .act{ color:#B899E0; }
   html[data-theme="dark"] .note{ background:#1E1A2B; border-color:#3A2F55; color:#D9C8F0; }
   html[data-theme="dark"] .empty{ background:#16221D; border-color:#2A3A32; color:#9CA79E; }
 </style>
 </head>
 <body>
+
+  <div class="bg-orb o1" aria-hidden="true"></div>
+  <div class="bg-orb o2" aria-hidden="true"></div>
 
   <div class="topbar">
     <a class="back-link" href="{{ url_for('dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
@@ -181,51 +248,63 @@
     {% if has_contact %}
     <div class="grid">
       {% if contact.phone %}
-      <a class="contact-card" href="{{ phone_href }}">
-        <div class="icon-badge">📞</div>
+      <div class="contact-card acc-phone">
+        <div class="icon-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
         <div class="body">
           <div class="label">اتصال هاتفي</div>
           <div class="value ltr">{{ contact.phone }}</div>
-          <div class="act">اضغط للاتصال</div>
-        </div>
-      </a>
-      {% endif %}
-      {% if contact.whatsapp %}
-      <a class="contact-card" href="{{ wa_link }}" target="_blank" rel="noopener">
-        <div class="icon-badge">💬</div>
-        <div class="body">
-          <div class="label">واتساب</div>
-          <div class="value ltr">{{ contact.whatsapp }}</div>
-          <div class="act">افتح المحادثة</div>
-        </div>
-      </a>
-      {% endif %}
-      {% if contact.email %}
-      <a class="contact-card wide" href="mailto:{{ contact.email }}">
-        <div class="icon-badge">✉️</div>
-        <div class="body">
-          <div class="label">البريد الإلكتروني</div>
-          <div class="value ltr fit">{{ contact.email }}</div>
-          <div class="act">أرسل رسالة</div>
-        </div>
-      </a>
-      {% endif %}
-      {% if contact.location %}
-      <div class="contact-card">
-        <div class="icon-badge">📍</div>
-        <div class="body">
-          <div class="label">موقع مكتب الدعم الفني</div>
-          <div class="value">{{ contact.location }}</div>
         </div>
       </div>
       {% endif %}
-      {% if contact.hours %}
-      <div class="contact-card">
-        <div class="icon-badge">🕗</div>
-        <div class="body">
-          <div class="label">أوقات الدوام</div>
-          <div class="value">{{ contact.hours }}</div>
+      {% if contact.whatsapp %}
+      <div class="contact-card acc-whats">
+        <div class="icon-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l1.65-4.9A8.5 8.5 0 1 1 8.1 19.4L3 21z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5l1.2-1.4-1.9-1-.9.6a3.5 3.5 0 0 1-1.6-1.6l.6-.9-1-1.9L9 9.5z"/></svg>
         </div>
+        <div class="body">
+          <div class="label">واتساب</div>
+          <div class="value ltr">{{ contact.whatsapp }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if contact.email %}
+      <div class="contact-card wide acc-mail">
+        <div class="icon-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+        </div>
+        <div class="body">
+          <div class="label">البريد الإلكتروني</div>
+          <div class="value ltr fit">{{ contact.email }}</div>
+        </div>
+      </div>
+      {% endif %}
+      {% if contact.hours or contact.location %}
+      <div class="contact-card wide info-card">
+        {% if contact.hours %}
+        <div class="info-half acc-hours">
+          <div class="icon-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          </div>
+          <div class="body">
+            <div class="label">أوقات الدوام</div>
+            <div class="value">{{ contact.hours }}</div>
+          </div>
+        </div>
+        {% endif %}
+        {% if contact.hours and contact.location %}<div class="info-divider"></div>{% endif %}
+        {% if contact.location %}
+        <div class="info-half acc-loc">
+          <div class="icon-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          </div>
+          <div class="body">
+            <div class="label">الموقع</div>
+            <div class="value">{{ contact.location }}</div>
+          </div>
+        </div>
+        {% endif %}
       </div>
       {% endif %}
     </div>
@@ -252,6 +331,21 @@
   window.addEventListener('load', fitEmail);
   window.addEventListener('resize', fitEmail);
   if (document.fonts && document.fonts.ready){ document.fonts.ready.then(fitEmail); }
+
+  // تأثير الموجة (ripple) عند الضغط على البطاقات
+  document.querySelectorAll('.ticket-card').forEach(function(card){
+    card.addEventListener('click', function(e){
+      var rect = card.getBoundingClientRect();
+      var size = Math.max(rect.width, rect.height) * 1.4;
+      var span = document.createElement('span');
+      span.className = 'ripple';
+      span.style.width = span.style.height = size + 'px';
+      span.style.left = (e.clientX - rect.left - size / 2) + 'px';
+      span.style.top = (e.clientY - rect.top - size / 2) + 'px';
+      card.appendChild(span);
+      setTimeout(function(){ span.remove(); }, 600);
+    });
+  });
 </script>
 </body>
 </html>

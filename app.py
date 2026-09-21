@@ -22,6 +22,8 @@ TICKETS_FILE = os.path.join(BASE_DIR, "tickets.csv")
 TRAINING_FILE = os.path.join(BASE_DIR, "training_requests.csv")
 NOTIF_DISMISS_FILE = os.path.join(BASE_DIR, "notification_dismissals.csv")  # تنبيهات الفنيين اللي تم تجاهلها (لكل موظف على حدة)
 COOP_SETTINGS_FILE = os.path.join(BASE_DIR, "coop_settings.json")  # بيانات منسّق التدريب التعاوني اللي تظهر للمنشآت
+DATE_COLUMNS = ["id", "email", "title", "kind", "course", "date", "time", "note", "done", "created_at"]
+DATES_FILE = os.path.join(BASE_DIR, "academic_dates.csv")  # المواعيد الدراسية المهمة اللي يضيفها الطالب بنفسه (اختبارات، تسليمات...)
 SUPPORT_SETTINGS_FILE = os.path.join(BASE_DIR, "support_settings.json")  # بيانات التواصل مع الدعم الفني اللي يعبّيها الموظفون وتظهر للطلاب
 
 TRAINING_DOCS_DIR = os.path.join(BASE_DIR, "static", "coop_docs")
@@ -164,6 +166,11 @@ def init_file():
         with open(NOTIF_DISMISS_FILE, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["staff_email", "key", "dismissed_at"])  # صف العناوين
+
+    if not os.path.exists(DATES_FILE):
+        with open(DATES_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(DATE_COLUMNS)  # صف العناوين
 
     fix_duplicate_ticket_ids()  # ينظّف أي تكرار قديم بالأرقام عند تشغيل التطبيق
 
@@ -2161,6 +2168,7 @@ def dashboard():
         open_tickets=open_tickets,
         resolved_tickets=resolved_tickets,
         support_hours=get_support_contact()["hours"],
+        next_date=get_next_student_date(session.get("email", "")),
     )
 
 
@@ -2194,6 +2202,285 @@ def support():
         phone_href=phone_href(contact["phone"]),
         has_contact=any(contact[k] for k in ("phone", "whatsapp", "email", "location")),
     )
+
+
+# ===================== المواعيد الدراسية =====================
+DATE_KINDS = {
+    "exam":  {"label": "اختبار",       "icon": "📝"},
+    "work":  {"label": "تسليم / مشروع", "icon": "📚"},
+    "admin": {"label": "موعد إداري",   "icon": "🗓️"},
+    "other": {"label": "أخرى",         "icon": "⭐"},
+}
+MAX_STUDENT_DATES = 100  # أقصى عدد مواعيد لكل طالب
+WEEKDAYS_AR = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]  # ترتيب weekday() في بايثون
+
+
+def _read_all_dates():
+    rows = []
+    with open(DATES_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            if not row:
+                continue
+            while len(row) < len(DATE_COLUMNS):
+                row.append("")
+            rows.append(row)
+    return rows
+
+
+def _write_all_dates(rows):
+    with open(DATES_FILE, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(DATE_COLUMNS)
+        writer.writerows(rows)
+
+
+def _next_date_id(rows):
+    max_id = 0
+    for r in rows:
+        try:
+            max_id = max(max_id, int(r[0]))
+        except (ValueError, IndexError):
+            continue
+    return max_id + 1
+
+
+def _format_time_ar(value):
+    """13:30 -> 1:30 م"""
+    if not value:
+        return ""
+    try:
+        t = datetime.strptime(value, "%H:%M")
+    except ValueError:
+        return ""
+    suffix = "ص" if t.hour < 12 else "م"
+    hour = t.hour % 12 or 12
+    return f"{hour}:{t.minute:02d} {suffix}"
+
+
+def _countdown_ar(days_left):
+    if days_left == 0:
+        return "اليوم"
+    if days_left == 1:
+        return "غدًا"
+    if days_left == 2:
+        return "بعد يومين"
+    if 3 <= days_left <= 10:
+        return f"بعد {days_left} أيام"
+    if days_left > 10:
+        return f"بعد {days_left} يومًا"
+    ago = -days_left
+    if ago == 1:
+        return "أمس"
+    if ago == 2:
+        return "قبل يومين"
+    if 3 <= ago <= 10:
+        return f"قبل {ago} أيام"
+    return f"قبل {ago} يومًا"
+
+
+def _row_to_date_item(row, today):
+    """يحوّل صف CSV إلى قاموس جاهز للعرض (مع العد التنازلي والحالة)."""
+    try:
+        d = datetime.strptime(row[5], "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    kind = row[3] if row[3] in DATE_KINDS else "other"
+    done = row[8] == "1"
+    days_left = (d - today).days
+    if done:
+        state = "done"
+    elif days_left < 0:
+        state = "overdue"
+    elif days_left == 0:
+        state = "today"
+    elif days_left <= 3:
+        state = "soon"
+    else:
+        state = "later"
+    return {
+        "id": int(row[0]), "title": row[2], "kind": kind,
+        "kind_label": DATE_KINDS[kind]["label"], "icon": DATE_KINDS[kind]["icon"],
+        "course": row[4], "date": row[5], "time": row[6], "time_label": _format_time_ar(row[6]),
+        "note": row[7], "done": done, "days_left": days_left,
+        "countdown": _countdown_ar(days_left), "state": state,
+        "weekday": WEEKDAYS_AR[d.weekday()], "day": d.day,
+        "month": ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو",
+                  "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"][d.month - 1],
+        "sort_key": (row[5], row[6] or "99:99"),
+    }
+
+
+def get_student_dates(email):
+    """كل مواعيد الطالب كقواميس جاهزة للعرض."""
+    today = date.today()
+    items = []
+    for row in _read_all_dates():
+        if row[1] != email:
+            continue
+        item = _row_to_date_item(row, today)
+        if item:
+            items.append(item)
+    return items
+
+
+def get_student_date(date_id, email):
+    for row in _read_all_dates():
+        if row[0] == str(date_id) and row[1] == email:
+            return row
+    return None
+
+
+def build_week_strip(items):
+    """أيام الأسبوع الحالي (أحد → سبت) ومعها مواعيد كل يوم."""
+    today = date.today()
+    start = today - timedelta(days=(today.weekday() + 1) % 7)  # آخر أحد
+    strip = []
+    for i in range(7):
+        d = start + timedelta(days=i)
+        iso = d.strftime("%Y-%m-%d")
+        strip.append({
+            "name": WEEKDAYS_AR[d.weekday()], "day": d.day, "is_today": d == today,
+            "events": [x for x in items if x["date"] == iso and not x["done"]],
+        })
+    return strip
+
+
+def get_next_student_date(email):
+    """أقرب موعد قادم غير منتهي (لعرضه على لوحة الطالب)."""
+    upcoming = [x for x in get_student_dates(email) if not x["done"] and x["days_left"] >= 0]
+    upcoming.sort(key=lambda x: x["sort_key"])
+    return upcoming[0] if upcoming else None
+
+
+def _validate_date_form(form):
+    """يرجّع (قيم منظّفة، رسالة خطأ أو None)."""
+    title = form.get("title", "").strip()
+    kind = form.get("kind", "exam")
+    course = form.get("course", "").strip()
+    date_val = form.get("date", "").strip()
+    time_val = form.get("time", "").strip()
+    note = form.get("note", "").strip()
+    values = {"title": title, "kind": kind, "course": course, "date": date_val, "time": time_val, "note": note}
+    if not title:
+        return values, "اكتب عنوان الموعد"
+    if len(title) > 80 or len(course) > 50 or len(note) > 200:
+        return values, "النص طويل، اختصر العنوان أو المادة أو الملاحظة"
+    if kind not in DATE_KINDS:
+        return values, "نوع الموعد غير صحيح"
+    if not date_val or not _valid_date(date_val):
+        return values, "اختر تاريخًا صحيحًا"
+    if time_val:
+        try:
+            datetime.strptime(time_val, "%H:%M")
+        except ValueError:
+            return values, "الوقت غير صحيح"
+    return values, None
+
+
+@app.route("/my-dates", methods=["GET", "POST"])
+def my_dates():
+    guard = require_student()
+    if guard:
+        return guard
+    email = session["email"]
+    form_values = {"title": "", "kind": "exam", "course": "", "date": "", "time": "", "note": ""}
+
+    if request.method == "POST":
+        form_values, error = _validate_date_form(request.form)
+        if not error:
+            rows = _read_all_dates()
+            if sum(1 for r in rows if r[1] == email) >= MAX_STUDENT_DATES:
+                error = f"وصلت للحد الأقصى ({MAX_STUDENT_DATES} موعد)، احذف مواعيد قديمة أولًا"
+        if error:
+            flash(error)
+        else:
+            rows.append([
+                _next_date_id(rows), email, form_values["title"], form_values["kind"],
+                form_values["course"], form_values["date"], form_values["time"],
+                form_values["note"], "0", datetime.now().strftime("%Y-%m-%d %H:%M"),
+            ])
+            _write_all_dates(rows)
+            flash("تمت إضافة الموعد", "success")
+            return redirect(url_for("my_dates"))
+
+    items = get_student_dates(email)
+    upcoming = sorted([x for x in items if not x["done"] and x["days_left"] >= 0], key=lambda x: x["sort_key"])
+    past = sorted([x for x in items if x["done"] or x["days_left"] < 0], key=lambda x: x["sort_key"], reverse=True)
+    return render_template(
+        "my_dates.html", user=session["user"], kinds=DATE_KINDS,
+        upcoming=upcoming, past=past, week=build_week_strip(items),
+        next_item=upcoming[0] if upcoming else None,
+        exam_count=sum(1 for x in upcoming if x["kind"] == "exam"),
+        today_iso=date.today().strftime("%Y-%m-%d"),
+        editing=None, form=form_values,
+    )
+
+
+@app.route("/my-dates/<int:date_id>/edit", methods=["GET", "POST"])
+def edit_my_date(date_id):
+    guard = require_student()
+    if guard:
+        return guard
+    email = session["email"]
+    row = get_student_date(date_id, email)
+    if not row:
+        flash("الموعد غير موجود")
+        return redirect(url_for("my_dates"))
+
+    form_values = {"title": row[2], "kind": row[3], "course": row[4], "date": row[5], "time": row[6], "note": row[7]}
+    if request.method == "POST":
+        form_values, error = _validate_date_form(request.form)
+        if error:
+            flash(error)
+        else:
+            rows = _read_all_dates()
+            for r in rows:
+                if r[0] == str(date_id) and r[1] == email:
+                    r[2], r[3], r[4] = form_values["title"], form_values["kind"], form_values["course"]
+                    r[5], r[6], r[7] = form_values["date"], form_values["time"], form_values["note"]
+            _write_all_dates(rows)
+            flash("تم حفظ التعديل", "success")
+            return redirect(url_for("my_dates"))
+
+    items = get_student_dates(email)
+    upcoming = sorted([x for x in items if not x["done"] and x["days_left"] >= 0], key=lambda x: x["sort_key"])
+    past = sorted([x for x in items if x["done"] or x["days_left"] < 0], key=lambda x: x["sort_key"], reverse=True)
+    return render_template(
+        "my_dates.html", user=session["user"], kinds=DATE_KINDS,
+        upcoming=upcoming, past=past, week=build_week_strip(items),
+        next_item=upcoming[0] if upcoming else None,
+        exam_count=sum(1 for x in upcoming if x["kind"] == "exam"),
+        today_iso=date.today().strftime("%Y-%m-%d"),
+        editing=date_id, form=form_values,
+    )
+
+
+@app.route("/my-dates/<int:date_id>/done", methods=["POST"])
+def toggle_my_date_done(date_id):
+    guard = require_student()
+    if guard:
+        return guard
+    rows = _read_all_dates()
+    for r in rows:
+        if r[0] == str(date_id) and r[1] == session["email"]:
+            r[8] = "0" if r[8] == "1" else "1"
+    _write_all_dates(rows)
+    return redirect(url_for("my_dates"))
+
+
+@app.route("/my-dates/<int:date_id>/delete", methods=["POST"])
+def delete_my_date(date_id):
+    guard = require_student()
+    if guard:
+        return guard
+    rows = _read_all_dates()
+    kept = [r for r in rows if not (r[0] == str(date_id) and r[1] == session["email"])]
+    if len(kept) != len(rows):
+        _write_all_dates(kept)
+        flash("تم حذف الموعد", "success")
+    return redirect(url_for("my_dates"))
 
 
 @app.route("/profile", methods=["GET", "POST"])

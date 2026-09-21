@@ -1,0 +1,17 @@
+<div class="ev {{ e.state }}" style="--kc:var(--k-{{ e.kind }})">
+  <div class="datebox"><div class="d">{{ e.day }}</div><div class="m">{{ e.month }}</div></div>
+  <div class="info">
+    <div class="row1">
+      <span class="etitle">{{ e.title }}</span>
+      <span class="tag">{{ e.icon }} {{ e.kind_label }}</span>
+      <span class="cd {{ e.state }}">{{ 'مكتمل ✓' if e.done else e.countdown }}</span>
+    </div>
+    <div class="meta">{{ e.weekday }}{% if e.time_label %} · {{ e.time_label }}{% endif %}{% if e.course %} · {{ e.course }}{% endif %}</div>
+    {% if e.note %}<div class="enote">{{ e.note }}</div>{% endif %}
+    <div class="acts">
+      <form method="post" action="{{ url_for('toggle_my_date_done', date_id=e.id) }}"><button type="submit" class="abtn">{{ 'إعادة فتح' if e.done else 'تم ✓' }}</button></form>
+      <a class="abtn" href="{{ url_for('edit_my_date', date_id=e.id) }}">تعديل</a>
+      <form method="post" action="{{ url_for('delete_my_date', date_id=e.id) }}" onsubmit="return confirm('حذف هذا الموعد؟');"><button type="submit" class="abtn del">حذف</button></form>
+    </div>
+  </div>
+</div>

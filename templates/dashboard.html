@@ -319,6 +319,7 @@
   .card.c-blue{ --accent:#3F7EA8; --accent-bg:linear-gradient(135deg, rgba(63,126,168,.2), rgba(63,126,168,.05)); --accent-border:rgba(63,126,168,.3); --accent-shadow:rgba(63,126,168,.22); }
   .card.c-purple{ --accent:#8B5FBF; --accent-bg:linear-gradient(135deg, rgba(139,95,191,.2), rgba(139,95,191,.05)); --accent-border:rgba(139,95,191,.3); --accent-shadow:rgba(139,95,191,.22); }
   .card.c-teal{ --accent:#1F7A8C; --accent-bg:linear-gradient(135deg, rgba(31,122,140,.2), rgba(31,122,140,.05)); --accent-border:rgba(31,122,140,.3); --accent-shadow:rgba(31,122,140,.22); }
+  .card.c-rose{ --accent:#C2456B; --accent-bg:linear-gradient(135deg, rgba(194,69,107,.2), rgba(194,69,107,.05)); --accent-border:rgba(194,69,107,.3); --accent-shadow:rgba(194,69,107,.22); }
   .card.c-green{ --accent:#2E7D5B; --accent-bg:linear-gradient(135deg, rgba(46,125,91,.2), rgba(46,125,91,.05)); --accent-border:rgba(46,125,91,.3); --accent-shadow:rgba(46,125,91,.22); }
 
   /* بطاقة مميزة (أول رابط سريع) */
@@ -450,6 +451,7 @@
   .grid .card:nth-child(4){ animation-delay:.64s; }
   .grid .card:nth-child(5){ animation-delay:.70s; }
   .grid .card:nth-child(6){ animation-delay:.76s; }
+  .grid .card:nth-child(7){ animation-delay:.82s; }
   @media (prefers-reduced-motion: reduce){
     .topbar, .hero, .section-heading, .overview-card, .card{ animation:none !important; }
   }
@@ -669,6 +671,12 @@
         <div class="icon-badge">🎓</div>
         <div class="title">خدمة التدريب التعاوني</div>
         <div class="sub">تابع حالة طلب تدريبك</div>
+      </a>
+      <a href="{{ url_for('my_dates') }}" class="card c-rose">
+        <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <div class="icon-badge">🗓️</div>
+        <div class="title">مواعيدي الدراسية</div>
+        <div class="sub">{% if next_date %}{{ next_date.kind_label }}: {{ next_date.title }} — {{ next_date.countdown }}{% else %}سجّل اختباراتك وتسليماتك المهمة{% endif %}</div>
       </a>
       <a href="{{ url_for('support') }}" class="card c-purple">
         <span class="arrow"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M17 7L7 17M7 17H15M7 17V9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
