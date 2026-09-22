@@ -24,6 +24,8 @@ NOTIF_DISMISS_FILE = os.path.join(BASE_DIR, "notification_dismissals.csv")  # ت
 COOP_SETTINGS_FILE = os.path.join(BASE_DIR, "coop_settings.json")  # بيانات منسّق التدريب التعاوني اللي تظهر للمنشآت
 DATE_COLUMNS = ["id", "email", "title", "kind", "course", "date", "time", "note", "done", "created_at"]
 DATES_FILE = os.path.join(BASE_DIR, "academic_dates.csv")  # المواعيد الدراسية المهمة اللي يضيفها الطالب بنفسه (اختبارات، تسليمات...)
+SCHEDULE_COLUMNS = ["id", "email", "name", "day", "start", "end", "location", "color", "created_at"]
+SCHEDULE_FILE = os.path.join(BASE_DIR, "my_schedule.csv")  # جدول المواد الأسبوعي اللي يبنيه الطالب بنفسه
 SUPPORT_SETTINGS_FILE = os.path.join(BASE_DIR, "support_settings.json")  # بيانات التواصل مع الدعم الفني اللي يعبّيها الموظفون وتظهر للطلاب
 
 TRAINING_DOCS_DIR = os.path.join(BASE_DIR, "static", "coop_docs")
@@ -171,6 +173,11 @@ def init_file():
         with open(DATES_FILE, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(DATE_COLUMNS)  # صف العناوين
+
+    if not os.path.exists(SCHEDULE_FILE):
+        with open(SCHEDULE_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(SCHEDULE_COLUMNS)  # صف العناوين
 
     fix_duplicate_ticket_ids()  # ينظّف أي تكرار قديم بالأرقام عند تشغيل التطبيق
 
@@ -2214,6 +2221,15 @@ DATE_KINDS = {
 MAX_STUDENT_DATES = 100  # أقصى عدد مواعيد لكل طالب
 WEEKDAYS_AR = ["الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت", "الأحد"]  # ترتيب weekday() في بايثون
 
+SCHEDULE_DAYS = {
+    "sun": "الأحد", "mon": "الاثنين", "tue": "الثلاثاء", "wed": "الأربعاء", "thu": "الخميس",
+}  # أيام الأسبوع الدراسي اللي يقدر الطالب يضيف موادّه عليها
+SCHEDULE_COLORS = ["#E3A857", "#5B9BD5", "#D96A93", "#7FAF7A", "#9B7FC4", "#C08560", "#4FB8AE", "#8E97D6"]
+MAX_SCHEDULE_COURSES = 40  # أقصى عدد مواد بجدول الطالب الشخصي
+SCHEDULE_GRID_START_MIN = 7 * 60   # بداية الجدول 7:00 صباحًا
+SCHEDULE_GRID_END_MIN = 17 * 60    # نهاية الجدول 5:00 مساءً
+SCHEDULE_PX_PER_MIN = 80 / 60      # 80px لكل ساعة
+
 
 def _read_all_dates():
     rows = []
@@ -2330,6 +2346,113 @@ def get_student_date(date_id, email):
         if row[0] == str(date_id) and row[1] == email:
             return row
     return None
+
+
+def _read_all_schedule():
+    rows = []
+    with open(SCHEDULE_FILE, "r", encoding="utf-8") as f:
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            if not row:
+                continue
+            while len(row) < len(SCHEDULE_COLUMNS):
+                row.append("")
+            rows.append(row)
+    return rows
+
+
+def _write_all_schedule(rows):
+    with open(SCHEDULE_FILE, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(SCHEDULE_COLUMNS)
+        writer.writerows(rows)
+
+
+def _next_schedule_id(rows):
+    max_id = 0
+    for r in rows:
+        try:
+            max_id = max(max_id, int(r[0]))
+        except (ValueError, IndexError):
+            continue
+    return max_id + 1
+
+
+def _to_min(hhmm):
+    h, m = hhmm.split(":")
+    return int(h) * 60 + int(m)
+
+
+def get_student_schedule(email):
+    """كل مواد جدول الطالب الأسبوعي كقواميس جاهزة للعرض، مرتبة حسب اليوم ثم وقت البداية،
+    ومعها إحداثيات top/height الجاهزة لرسم الجدول (بدون أي JavaScript)."""
+    items = []
+    for row in _read_all_schedule():
+        if row[1] != email:
+            continue
+        start, end = row[4], row[5]
+        try:
+            start_min, end_min = _to_min(start), _to_min(end)
+        except (ValueError, IndexError):
+            continue
+        items.append({
+            "id": int(row[0]), "name": row[2], "day": row[3],
+            "day_label": SCHEDULE_DAYS.get(row[3], row[3]),
+            "start": start, "end": end,
+            "start_label": _format_time_ar(start), "end_label": _format_time_ar(end),
+            "location": row[6], "color": row[7] or SCHEDULE_COLORS[0],
+            "top_px": round(max(0, (start_min - SCHEDULE_GRID_START_MIN) * SCHEDULE_PX_PER_MIN)),
+            "height_px": round(max(24, (end_min - start_min) * SCHEDULE_PX_PER_MIN - 4)),
+        })
+    day_order = list(SCHEDULE_DAYS.keys())
+    items.sort(key=lambda x: (day_order.index(x["day"]) if x["day"] in day_order else 99, x["start"]))
+    return items
+
+
+def get_schedule_item(course_id, email):
+    for row in _read_all_schedule():
+        if row[0] == str(course_id) and row[1] == email:
+            return row
+    return None
+
+
+def _schedule_hour_labels():
+    labels = []
+    t = SCHEDULE_GRID_START_MIN
+    while t <= SCHEDULE_GRID_END_MIN:
+        h = t // 60
+        period = "ص" if h < 12 else "م"
+        h12 = h % 12 or 12
+        labels.append({"top_px": round((t - SCHEDULE_GRID_START_MIN) * SCHEDULE_PX_PER_MIN), "label": f"{h12} {period}"})
+        t += 60
+    return labels
+
+
+def _validate_schedule_form(form):
+    name = form.get("name", "").strip()
+    day = form.get("day", "")
+    start = form.get("start", "").strip()
+    end = form.get("end", "").strip()
+    location = form.get("location", "").strip()
+    color = form.get("color", "").strip()
+    values = {"name": name, "day": day or "sun", "start": start, "end": end, "location": location,
+              "color": color if color in SCHEDULE_COLORS else SCHEDULE_COLORS[0]}
+    if not name:
+        return values, "اكتب اسم المادة"
+    if len(name) > 60 or len(location) > 50:
+        return values, "النص طويل، اختصر اسم المادة أو القاعة"
+    if day not in SCHEDULE_DAYS:
+        return values, "اختر يومًا صحيحًا"
+    if not start or not end:
+        return values, "حدد وقت البداية والنهاية"
+    try:
+        t1, t2 = datetime.strptime(start, "%H:%M"), datetime.strptime(end, "%H:%M")
+    except ValueError:
+        return values, "الوقت غير صحيح"
+    if t2 <= t1:
+        return values, "وقت النهاية لازم يكون بعد وقت البداية"
+    return values, None
 
 
 def build_week_strip(items):
@@ -2481,6 +2604,90 @@ def delete_my_date(date_id):
         _write_all_dates(kept)
         flash("تم حذف الموعد", "success")
     return redirect(url_for("my_dates"))
+
+
+@app.route("/my-schedule", methods=["GET", "POST"])
+def my_schedule():
+    guard = require_student()
+    if guard:
+        return guard
+    email = session["email"]
+    form_values = {"name": "", "day": "sun", "start": "08:00", "end": "09:30", "location": "", "color": SCHEDULE_COLORS[0]}
+
+    if request.method == "POST":
+        form_values, error = _validate_schedule_form(request.form)
+        if not error:
+            rows = _read_all_schedule()
+            if sum(1 for r in rows if r[1] == email) >= MAX_SCHEDULE_COURSES:
+                error = f"وصلت للحد الأقصى ({MAX_SCHEDULE_COURSES} مادة)، احذف مواد قديمة أولًا"
+        if error:
+            flash(error)
+        else:
+            rows.append([
+                _next_schedule_id(rows), email, form_values["name"], form_values["day"],
+                form_values["start"], form_values["end"], form_values["location"],
+                form_values["color"], datetime.now().strftime("%Y-%m-%d %H:%M"),
+            ])
+            _write_all_schedule(rows)
+            flash("تمت إضافة المادة", "success")
+            return redirect(url_for("my_schedule"))
+
+    items = get_student_schedule(email)
+    hours = _schedule_hour_labels()
+    grid_height = round((SCHEDULE_GRID_END_MIN - SCHEDULE_GRID_START_MIN) * SCHEDULE_PX_PER_MIN)
+    return render_template(
+        "my_schedule.html", user=session["user"], days=SCHEDULE_DAYS, colors=SCHEDULE_COLORS,
+        items=items, hours=hours, grid_height=grid_height, form=form_values, editing=None,
+    )
+
+
+@app.route("/my-schedule/<int:course_id>/edit", methods=["GET", "POST"])
+def edit_my_schedule(course_id):
+    guard = require_student()
+    if guard:
+        return guard
+    email = session["email"]
+    row = get_schedule_item(course_id, email)
+    if not row:
+        flash("المادة غير موجودة")
+        return redirect(url_for("my_schedule"))
+
+    form_values = {"name": row[2], "day": row[3], "start": row[4], "end": row[5], "location": row[6], "color": row[7]}
+    if request.method == "POST":
+        form_values, error = _validate_schedule_form(request.form)
+        if error:
+            flash(error)
+        else:
+            rows = _read_all_schedule()
+            for r in rows:
+                if r[0] == str(course_id) and r[1] == email:
+                    r[2], r[3] = form_values["name"], form_values["day"]
+                    r[4], r[5] = form_values["start"], form_values["end"]
+                    r[6], r[7] = form_values["location"], form_values["color"]
+            _write_all_schedule(rows)
+            flash("تم حفظ التعديل", "success")
+            return redirect(url_for("my_schedule"))
+
+    items = get_student_schedule(email)
+    hours = _schedule_hour_labels()
+    grid_height = round((SCHEDULE_GRID_END_MIN - SCHEDULE_GRID_START_MIN) * SCHEDULE_PX_PER_MIN)
+    return render_template(
+        "my_schedule.html", user=session["user"], days=SCHEDULE_DAYS, colors=SCHEDULE_COLORS,
+        items=items, hours=hours, grid_height=grid_height, form=form_values, editing=course_id,
+    )
+
+
+@app.route("/my-schedule/<int:course_id>/delete", methods=["POST"])
+def delete_my_schedule(course_id):
+    guard = require_student()
+    if guard:
+        return guard
+    rows = _read_all_schedule()
+    kept = [r for r in rows if not (r[0] == str(course_id) and r[1] == session["email"])]
+    if len(kept) != len(rows):
+        _write_all_schedule(kept)
+        flash("تم حذف المادة", "success")
+    return redirect(url_for("my_schedule"))
 
 
 @app.route("/profile", methods=["GET", "POST"])

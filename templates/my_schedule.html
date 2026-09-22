@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>College Student Portal | جدولي</title>
+<script>
+  (function(){
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@700;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1A18; --gold:#C8A24A; --sand:#F4EEE1; --line:#E1D9C4; --muted:#7A7263;
+    --rose:#C2456B; --error:#C4623F; --ok:#2E7D5B; --indigo:#5B6CBF;
+    --now-line:#C2456B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{ font-family:'IBM Plex Sans Arabic', sans-serif; background:var(--sand); color:var(--ink); min-height:100vh; }
+
+  .topbar{ display:flex; align-items:center; padding:20px 32px; }
+  .back-link{
+    color:var(--ink); text-decoration:none; font-size:14px; font-weight:500;
+    display:inline-flex; align-items:center; gap:8px;
+    background:#fff; border:1.5px solid var(--line); border-radius:20px;
+    padding:8px 16px; transition:border-color .18s ease, background .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+  .back-link svg{ width:16px; height:16px; flex-shrink:0; transition:transform .25s ease; }
+  .back-link:hover{ border-color:var(--indigo); background:#FBF8F0; transform:translateX(3px); box-shadow:0 4px 12px rgba(91,108,191,.12); }
+  .back-link:hover svg{ transform:translateX(3px); }
+  .back-link:active{ transform:translateX(1px) scale(.97); }
+
+  .content{ max-width:1160px; margin:0 auto; padding:12px 24px 70px; }
+  .content h1{
+    font-family:'Tajawal', sans-serif; font-weight:900; font-size:28px; margin-bottom:6px;
+    background:linear-gradient(90deg, var(--ink), var(--indigo));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  html[data-theme="dark"] .content h1{ background:linear-gradient(90deg, #EDE7D8, var(--gold)); -webkit-background-clip:text; background-clip:text; }
+  .content .sub{ color:var(--muted); font-size:14px; margin-bottom:26px; }
+
+  .flash{ background:#FBEAE3; border:1px solid var(--error); color:#8A3B22; font-size:14px; padding:12px 16px; border-radius:8px; margin-bottom:20px; }
+  .flash-success{ background:#E6F4EC; border-color:var(--ok); color:#1E5A3F; }
+
+  .panel{
+    background:#fff; border:1.5px solid var(--line); border-radius:16px; padding:24px; margin-bottom:24px;
+    box-shadow:0 1px 2px rgba(15,26,24,.03); transition:box-shadow .25s ease, border-color .25s ease;
+  }
+  .panel:hover{ box-shadow:0 10px 28px -14px rgba(15,26,24,.16); }
+  .panel h2{ font-family:'Tajawal', sans-serif; font-weight:900; font-size:18px; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .panel h2 .cnt{
+    font-family:'IBM Plex Sans Arabic', sans-serif; font-size:12px; font-weight:700;
+    color:var(--indigo); background:color-mix(in srgb, var(--indigo) 14%, var(--sand));
+    border:1px solid color-mix(in srgb, var(--indigo) 30%, transparent);
+    border-radius:12px; padding:2px 10px; animation:pop .45s cubic-bezier(.3,1.6,.5,1) both; animation-delay:.35s;
+  }
+
+  /* ===== الجدول الأسبوعي ===== */
+  .sched-grid-wrap{ overflow-x:auto; border:1.5px solid var(--line); border-radius:12px; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+  .sched-grid-wrap::-webkit-scrollbar{ height:8px; }
+  .sched-grid-wrap::-webkit-scrollbar-thumb{ background:var(--line); border-radius:8px; }
+  .sched-grid-wrap::-webkit-scrollbar-track{ background:transparent; }
+  .sched-grid{
+    display:grid;
+    grid-template-columns: 50px repeat({{ days|length }}, minmax(120px, 1fr));
+    min-width:760px;
+    position:relative;
+  }
+  .corner{ background:var(--sand); border-bottom:1px solid var(--line); }
+  .day-head{
+    padding:10px 6px; text-align:center; font-weight:700; font-size:13.5px;
+    background:var(--sand); border-bottom:1px solid var(--line); border-inline-start:1px solid var(--line);
+    position:relative; transition:color .2s ease;
+  }
+  .day-head.is-today{ color:var(--rose); }
+  .day-head.is-today::after{
+    content:""; position:absolute; bottom:-1.5px; inset-inline-start:50%; transform:translateX(50%);
+    width:18px; height:2.5px; border-radius:2px; background:var(--rose);
+  }
+  .time-col{ border-inline-start:1px solid var(--line); position:relative; }
+  .time-label{
+    position:absolute; inset-inline-start:-1px; width:51px; text-align:center;
+    font-size:11px; color:var(--muted); transform:translateY(-7px);
+  }
+  .day-body{
+    position:relative; border-inline-start:1px solid var(--line);
+    background-image:repeating-linear-gradient(to bottom, transparent, transparent 79px, var(--line) 79px, var(--line) 80px);
+  }
+
+  /* خط الوقت الحالي */
+  .now-line{
+    position:absolute; inset-inline-start:0; inset-inline-end:0; height:2px; background:var(--now-line);
+    z-index:3; pointer-events:none; opacity:0; transform:scaleX(0); transform-origin:right;
+    transition:opacity .3s ease, transform .6s cubic-bezier(.2,.7,.2,1);
+  }
+  .now-line.show{ opacity:1; transform:scaleX(1); }
+  .now-line::before{
+    content:""; position:absolute; inset-inline-end:-4px; top:50%; transform:translateY(-50%);
+    width:9px; height:9px; border-radius:50%; background:var(--now-line);
+    box-shadow:0 0 0 0 rgba(194,69,107,.55); animation:nowPulse 2.2s ease-out infinite;
+  }
+
+  .course-block-form{ position:absolute; inset-inline-start:3px; inset-inline-end:3px; margin:0; opacity:0; animation:blockIn .5s cubic-bezier(.25,.8,.35,1) both; animation-delay:calc(var(--i, 0) * 60ms + .15s); }
+  .course-block{
+    width:100%; height:100%; border:none; cursor:pointer; border-radius:9px;
+    padding:6px 9px; color:#fff; font-family:inherit; text-align:start;
+    display:block; overflow:hidden; box-shadow:0 2px 6px rgba(0,0,0,.16);
+    transition:filter .15s ease, transform .18s cubic-bezier(.3,1.4,.4,1), box-shadow .18s ease;
+    position:relative;
+  }
+  .course-block::before{
+    content:""; position:absolute; inset-inline-start:0; top:0; bottom:0; width:3px;
+    background:rgba(255,255,255,.55); border-start-start-radius:9px; border-end-start-radius:9px;
+  }
+  .course-block:hover{ filter:brightness(1.07); transform:translateY(-2px) scale(1.012); box-shadow:0 8px 16px -4px rgba(0,0,0,.3); }
+  .course-block:active{ transform:translateY(0) scale(.985); }
+  .course-block .cname{ font-weight:700; font-size:12.5px; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .course-block .cmeta{ font-size:10.5px; opacity:.92; display:block; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+  .empty{ text-align:center; color:var(--muted); font-size:14px; line-height:1.9; padding:26px 10px; border:1.5px dashed var(--line); border-radius:14px; margin-top:16px; }
+  .empty .em-ico{
+    font-size:32px; margin-bottom:6px; display:inline-block; opacity:0;
+    animation:iconIn .9s cubic-bezier(.16,.8,.3,1) both, float 4.6s ease-in-out infinite .9s;
+  }
+
+  /* ===== قائمة المواد ===== */
+  .course-row{
+    display:flex; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid var(--line); border-radius:12px;
+    margin-bottom:10px; background:#fff; opacity:0; animation:rowIn .45s ease both; animation-delay:calc(var(--i, 0) * 55ms);
+    transition:border-color .18s ease, transform .18s ease, box-shadow .18s ease;
+  }
+  .course-row:hover{ border-color:var(--indigo); transform:translateX(-3px); box-shadow:0 6px 16px -8px rgba(91,108,191,.25); }
+  .course-row .dot{ width:11px; height:11px; border-radius:50%; flex-shrink:0; box-shadow:0 0 0 3px color-mix(in srgb, currentColor 18%, transparent); }
+  .cr-info{ flex:1; min-width:0; }
+  .cr-name{ font-weight:600; font-size:14.5px; }
+  .cr-meta{ font-size:12.5px; color:var(--muted); margin-top:2px; }
+  .acts form{ display:inline; }
+  .abtn{
+    font-family:inherit; font-size:12px; color:var(--ink); background:var(--sand); border:1.5px solid var(--line); border-radius:8px;
+    padding:7px 13px; cursor:pointer; text-decoration:none; display:inline-block; transition:border-color .15s ease, transform .12s ease, background .15s ease;
+  }
+  .abtn:hover{ transform:translateY(-1px); }
+  .abtn:active{ transform:translateY(0) scale(.96); }
+  .abtn.del:hover{ border-color:var(--error); color:var(--error); background:#FBEAE3; }
+
+  /* ===== التخطيط ===== */
+  .layout{ display:grid; grid-template-columns:1.6fr 1fr; gap:24px; align-items:start; }
+  .side{ position:sticky; top:16px; }
+
+  /* ===== النموذج ===== */
+  .field{ margin-bottom:14px; }
+  .field label{ display:block; font-size:13px; font-weight:500; margin-bottom:6px; }
+  .field .opt{ color:var(--muted); font-weight:400; font-size:12px; }
+  .field input{
+    width:100%; font-family:inherit; font-size:14px; color:var(--ink); background:#fff;
+    border:1.5px solid var(--line); border-radius:10px; padding:10px 12px; outline:none;
+    transition:border-color .18s ease, box-shadow .18s ease;
+  }
+  .field input:focus{ border-color:var(--indigo); box-shadow:0 0 0 4px color-mix(in srgb, var(--indigo) 14%, transparent); }
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  .days-pick{ display:flex; flex-wrap:wrap; gap:7px; }
+  .days-pick input{ position:absolute; opacity:0; pointer-events:none; }
+  .days-pick label{
+    margin:0; cursor:pointer; font-size:12.5px; font-weight:500; padding:8px 12px; border:1.5px solid var(--line);
+    border-radius:9px; background:var(--sand); transition:all .16s cubic-bezier(.3,1.3,.4,1);
+    display:inline-block;
+  }
+  .days-pick label:hover{ transform:translateY(-1px); }
+  .days-pick input:checked + label{
+    border-color:var(--indigo); background:color-mix(in srgb, var(--indigo) 14%, transparent); color:var(--indigo);
+    font-weight:600; transform:scale(1.04);
+  }
+  .days-pick input:focus-visible + label{ outline:2px solid var(--rose); outline-offset:2px; }
+
+  .colors{ display:flex; flex-wrap:wrap; gap:10px; }
+  .colors input{ position:absolute; opacity:0; pointer-events:none; }
+  .colors .swatch{
+    display:flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; cursor:pointer;
+    border:2px solid transparent; transition:transform .18s cubic-bezier(.3,1.6,.4,1), box-shadow .18s ease; position:relative;
+  }
+  .colors .swatch:hover{ transform:scale(1.12); }
+  .colors .swatch svg{ width:13px; height:13px; opacity:0; transform:scale(.4); transition:opacity .18s ease, transform .18s cubic-bezier(.3,1.6,.4,1); }
+  .colors input:checked + .swatch{ border-color:var(--ink); transform:scale(1.12); box-shadow:0 3px 10px -3px rgba(0,0,0,.35); }
+  .colors input:checked + .swatch svg{ opacity:1; transform:scale(1); }
+  .colors input:focus-visible + .swatch{ outline:2px solid var(--rose); outline-offset:2px; }
+
+  .submit{
+    width:100%; font-family:inherit; font-size:14.5px; font-weight:600; color:#fff; background:var(--ink); border:none;
+    border-radius:10px; padding:12px; cursor:pointer; transition:background .18s ease, transform .12s ease, box-shadow .18s ease;
+  }
+  .submit:hover{ background:#1B322C; box-shadow:0 8px 18px -6px rgba(15,26,24,.35); }
+  .submit:active{ transform:scale(.98); }
+  .cancel-link{ display:block; text-align:center; margin-top:10px; font-size:13px; color:var(--muted); text-decoration:none; transition:color .15s ease; }
+  .cancel-link:hover{ color:var(--ink); }
+
+  @media (max-width:900px){
+    .layout{ grid-template-columns:1fr; }
+    .side{ position:static; order:-1; }
+  }
+  @media (max-width:480px){
+    .topbar{ padding:16px 14px; }
+    .content{ padding:12px 12px 50px; }
+    .panel{ padding:18px 14px; }
+  }
+
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+  @keyframes blockIn{ from{ opacity:0; transform:translateY(6px) scale(.96); } to{ opacity:1; transform:none; } }
+  @keyframes rowIn{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+  @keyframes pop{ 0%{ transform:scale(.6); opacity:0; } 60%{ transform:scale(1.12); opacity:1; } 100%{ transform:scale(1); } }
+  @keyframes iconIn{ from{ opacity:0; transform:scale(.7) translateY(8px); } to{ opacity:1; transform:scale(1) translateY(0); } }
+  @keyframes float{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-4px); } }
+  @keyframes nowPulse{ 0%{ box-shadow:0 0 0 0 rgba(194,69,107,.5); } 70%{ box-shadow:0 0 0 8px rgba(194,69,107,0); } 100%{ box-shadow:0 0 0 0 rgba(194,69,107,0); } }
+  .panel, .flash{ animation:fadeUp .5s ease both; }
+  @media (prefers-reduced-motion: reduce){
+    .panel, .flash, .course-block-form, .course-row, .cnt, .empty .em-ico{ animation:none !important; }
+    .now-line{ transition:opacity .3s ease !important; }
+    .now-line::before{ animation:none !important; }
+    *{ scroll-behavior:auto !important; }
+  }
+
+  /* ===== الوضع الداكن ===== */
+  html[data-theme="dark"] body{ background:#0B1412; color:#EDE7D8; }
+  html[data-theme="dark"] .back-link{ background:#16221D; border-color:#2A3A32; color:#EDE7D8; }
+  html[data-theme="dark"] .content .sub,
+  html[data-theme="dark"] .cr-meta, html[data-theme="dark"] .empty,
+  html[data-theme="dark"] .time-label, html[data-theme="dark"] .day-head,
+  html[data-theme="dark"] .cancel-link{ color:#9CA79E; }
+  html[data-theme="dark"] .panel h2 .cnt{
+    color:var(--gold); background:color-mix(in srgb, var(--gold) 16%, #16221D);
+    border-color:color-mix(in srgb, var(--gold) 35%, transparent);
+  }
+  html[data-theme="dark"] .panel, html[data-theme="dark"] .course-row,
+  html[data-theme="dark"] .sched-grid-wrap{ background:#16221D; border-color:#2A3A32; }
+  html[data-theme="dark"] .panel:hover{ box-shadow:0 10px 28px -14px rgba(0,0,0,.5); }
+  html[data-theme="dark"] .corner, html[data-theme="dark"] .day-head{ background:#1E2C26; }
+  html[data-theme="dark"] .day-head.is-today{ color:var(--gold); }
+  html[data-theme="dark"] .day-head.is-today::after{ background:var(--gold); }
+  html[data-theme="dark"] .abtn, html[data-theme="dark"] .days-pick label{ background:#1E2C26; border-color:#2A3A32; color:#EDE7D8; }
+  html[data-theme="dark"] .abtn.del:hover{ background:#3A1F16; }
+  html[data-theme="dark"] .days-pick input:checked + label{ background:color-mix(in srgb, var(--indigo) 24%, transparent); }
+  html[data-theme="dark"] .empty{ border-color:#2A3A32; }
+  html[data-theme="dark"] .field input{ background:#0F1A16; border-color:#2A3A32; color:#EDE7D8; color-scheme:dark; }
+  html[data-theme="dark"] .submit{ background:var(--gold); color:var(--ink); }
+  html[data-theme="dark"] .submit:hover{ background:#D7B45E; box-shadow:0 8px 18px -6px rgba(200,162,74,.35); }
+  html[data-theme="dark"] .flash{ background:#3A1F16; color:#F0B8A4; }
+  html[data-theme="dark"] .flash-success{ background:#173026; color:#9BE0BC; }
+  html[data-theme="dark"] .day-body{ background-image:repeating-linear-gradient(to bottom, transparent, transparent 79px, #2A3A32 79px, #2A3A32 80px); }
+  html[data-theme="dark"] .now-line{ --now-line:var(--gold); }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <a class="back-link" href="{{ url_for('dashboard') }}"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 11L12 4L20 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10V19C6 19.5523 6.44772 20 7 20H10V15C10 14.4477 10.4477 14 11 14H13C13.5523 14 14 14.4477 14 15V20H17C17.5523 20 18 19.5523 18 19V10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>رجوع للوحة التحكم</a>
+  </div>
+
+  <main class="content">
+    <h1>جدولي</h1>
+    <p class="sub">أضف موادك ورتّب جدولك الأسبوعي بنفسك</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="flash {{ 'flash-success' if category == 'success' else '' }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {# ===== الجدول الأسبوعي ===== #}
+    <div class="panel">
+      <h2>جدولي الأسبوعي <span class="cnt">{{ items|length }} مواد</span></h2>
+      <div class="sched-grid-wrap">
+        <div class="sched-grid">
+          <div class="corner"></div>
+          {% for key, label in days.items() %}
+            <div class="day-head" data-day="{{ key }}">{{ label }}</div>
+          {% endfor %}
+
+          <div class="time-col" style="height:{{ grid_height }}px;">
+            {% for h in hours %}
+              <div class="time-label" style="top:{{ h.top_px }}px;">{{ h.label }}</div>
+            {% endfor %}
+          </div>
+
+          {% for key, label in days.items() %}
+            <div class="day-body" data-day="{{ key }}" style="height:{{ grid_height }}px;">
+              <div class="now-line" data-now-line></div>
+              {% for c in items if c.day == key %}
+                <form method="post" action="{{ url_for('delete_my_schedule', course_id=c.id) }}"
+                      onsubmit="return confirm('حذف مادة &quot;{{ c.name }}&quot; من الجدول؟');"
+                      class="course-block-form" style="top:{{ c.top_px }}px; height:{{ c.height_px }}px; --i:{{ loop.index0 }};">
+                  <button type="submit" class="course-block" style="background:{{ c.color }};" title="اضغط لحذف المادة">
+                    <span class="cname">{{ c.name }}</span>
+                    <span class="cmeta">{{ c.start_label }} – {{ c.end_label }}{% if c.location %} · {{ c.location }}{% endif %}</span>
+                  </button>
+                </form>
+              {% endfor %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% if not items %}
+        <div class="empty"><div class="em-ico">🗓️</div>ما فيه مواد مضافة بعد.<br>أضف أول مادة من النموذج وبتظهر هنا في جدولك.</div>
+      {% endif %}
+    </div>
+
+    <div class="layout">
+      {# ===== قائمة المواد ===== #}
+      <div class="panel">
+        <h2>قائمة المواد <span class="cnt">{{ items|length }}</span></h2>
+        {% if items %}
+          {% for c in items %}
+            <div class="course-row" style="--i:{{ loop.index0 }};">
+              <span class="dot" style="background:{{ c.color }}; color:{{ c.color }};"></span>
+              <div class="cr-info">
+                <div class="cr-name">{{ c.name }}</div>
+                <div class="cr-meta">{{ c.day_label }} · {{ c.start_label }} – {{ c.end_label }}{% if c.location %} · {{ c.location }}{% endif %}</div>
+              </div>
+              <div class="acts">
+                <a class="abtn" href="{{ url_for('edit_my_schedule', course_id=c.id) }}">تعديل</a>
+                <form method="post" action="{{ url_for('delete_my_schedule', course_id=c.id) }}" onsubmit="return confirm('حذف &quot;{{ c.name }}&quot;؟');">
+                  <button type="submit" class="abtn del">حذف</button>
+                </form>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty"><div class="em-ico">📚</div>لسا ما أضفت أي مادة.</div>
+        {% endif %}
+      </div>
+
+      {# ===== النموذج ===== #}
+      <div class="side">
+        <div class="panel">
+          <h2>{{ 'تعديل المادة' if editing else 'إضافة مادة' }}</h2>
+          <form method="post" action="{{ url_for('edit_my_schedule', course_id=editing) if editing else url_for('my_schedule') }}">
+            <div class="field">
+              <label for="name">اسم المادة</label>
+              <input type="text" id="name" name="name" maxlength="60" required placeholder="مثال: نظم التشغيل 2" value="{{ form.name }}">
+            </div>
+            <div class="field">
+              <label>اليوم</label>
+              <div class="days-pick">
+                {% for key, label in days.items() %}
+                <div style="position:relative;">
+                  <input type="radio" name="day" id="day-{{ key }}" value="{{ key }}" {{ 'checked' if form.day == key else '' }}>
+                  <label for="day-{{ key }}">{{ label }}</label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="two">
+              <div class="field">
+                <label for="start">من</label>
+                <input type="time" id="start" name="start" required value="{{ form.start }}">
+              </div>
+              <div class="field">
+                <label for="end">إلى</label>
+                <input type="time" id="end" name="end" required value="{{ form.end }}">
+              </div>
+            </div>
+            <div class="field">
+              <label for="location">القاعة / ملاحظة <span class="opt">(اختياري)</span></label>
+              <input type="text" id="location" name="location" maxlength="50" placeholder="مثال: قاعة 204" value="{{ form.location }}">
+            </div>
+            <div class="field">
+              <label>اللون</label>
+              <div class="colors">
+                {% for c in colors %}
+                <div style="position:relative;">
+                  <input type="radio" name="color" id="col-{{ loop.index }}" value="{{ c }}" {{ 'checked' if form.color == c else '' }}>
+                  <label for="col-{{ loop.index }}" class="swatch" style="background:{{ c }};">
+                    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12L10 18L20 6" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </label>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+            <button type="submit" class="submit">{{ 'حفظ التعديل' if editing else 'إضافة المادة' }}</button>
+            {% if editing %}<a class="cancel-link" href="{{ url_for('my_schedule') }}">إلغاء التعديل</a>{% endif %}
+          </form>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // يحدد اليوم الحالي (أحد..خميس) ويرسم خط الوقت الحالي المتحرك داخل عمود اليوم المطابق
+    (function(){
+      var KEY_BY_GETDAY = {0:'sun',1:'mon',2:'tue',3:'wed',4:'thu'};
+      var GRID_START_MIN = {{ (grid_start_min if grid_start_min is defined else 420) }};
+      var GRID_END_MIN = {{ (grid_end_min if grid_end_min is defined else 1020) }};
+      var PX_PER_MIN = {{ (px_per_min if px_per_min is defined else (80/60)) }};
+
+      function todayKey(){ return KEY_BY_GETDAY[new Date().getDay()]; }
+
+      function markTodayHeader(){
+        var k = todayKey();
+        document.querySelectorAll('.day-head[data-day]').forEach(function(el){
+          el.classList.toggle('is-today', !!k && el.getAttribute('data-day') === k);
+        });
+      }
+
+      function tickNowLine(){
+        var k = todayKey();
+        var now = new Date();
+        var mins = now.getHours() * 60 + now.getMinutes();
+        var within = k && mins >= GRID_START_MIN && mins <= GRID_END_MIN;
+        var top = within ? (mins - GRID_START_MIN) * PX_PER_MIN : 0;
+
+        document.querySelectorAll('.day-body[data-day]').forEach(function(body){
+          var line = body.querySelector('[data-now-line]');
+          if(!line) return;
+          var isTodayCol = body.getAttribute('data-day') === k;
+          if(within && isTodayCol){
+            line.style.top = top + 'px';
+            line.classList.add('show');
+          } else {
+            line.classList.remove('show');
+          }
+        });
+      }
+
+      markTodayHeader();
+      tickNowLine();
+      setInterval(tickNowLine, 60000);
+    })();
+  </script>
+
+</body>
+</html>
